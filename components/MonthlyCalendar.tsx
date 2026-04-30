@@ -48,9 +48,10 @@ export default function MonthlyCalendar() {
   const topMood = Object.entries(moodDist).sort((a, b) => b[1] - a[1])[0];
   const totalDays = Object.keys(moodDist).reduce((s, k) => s + moodDist[k], 0);
 
-  const cells = Array.from({ length: firstDayOfWeek }, () => null).concat(
-    Array.from({ length: daysInMonth }, (_, i) => i + 1)
-  );
+  const cells: (number | null)[] = [
+    ...Array.from({ length: firstDayOfWeek }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
 
   return (
     <div className="space-y-5">
