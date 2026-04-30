@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { getThisWeekReflection, getReflections, saveReflection, getMoodHistory, getJournalEntries } from '@/lib/supabase';
 import { getWeeklyObservationPrompt } from '@/lib/prompts';
+import MonthlyCalendar from '@/components/MonthlyCalendar';
+import GuidedJournal from '@/components/GuidedJournal';
 import ReflectWithAI from '@/components/ReflectWithAI';
 
 interface Reflection {
@@ -23,6 +25,8 @@ export default function ReflectPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [weekContext, setWeekContext] = useState('');
+  const [activeTab, setActiveTab] = useState<'weekly' | 'monthly' | 'guided'>('weekly');
+  const [showGuided, setShowGuided] = useState(false);
   const observationPrompt = getWeeklyObservationPrompt();
 
   useEffect(() => {
@@ -68,12 +72,40 @@ export default function ReflectPage() {
 
   return (
     <div className="px-5 pt-8 animate-fade-in pb-8">
-      <div className="mb-7">
-        <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">Weekly space</p>
+      <div className="mb-5">
+        <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">Your space</p>
         <h1 className="font-serif text-3xl text-warm-900">Reflect</h1>
       </div>
 
-      {/* This week's reflection */}
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-warm-100 p-1 rounded-2xl mb-6">
+        {(['weekly', 'monthly', 'guided'] as const).map((tab) => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-2 text-xs font-medium rounded-xl capitalize transition-all ${
+              activeTab === tab ? 'bg-white text-warm-800 shadow-card' : 'text-warm-400'}`}>
+            {tab === 'guided' ? '🌿 Guided' : tab === 'monthly' ? '📅 Monthly' : '🌙 Weekly'}
+          </button>
+        ))}
+      </div>
+
+      {/* Guided journal */}
+      {activeTab === 'guided' && (
+        <div className="bg-white rounded-3xl p-5 shadow-card border border-warm-100 mb-6">
+          <p className="text-sm font-medium text-warm-700 mb-1">Guided reflection session</p>
+          <p className="text-xs text-warm-400 mb-4">A gentle conversation with yourself — 5 psychology-based prompts.</p>
+          <button onClick={() => setShowGuided(true)}
+            className="w-full py-3 bg-sage text-white rounded-2xl text-sm font-medium active:scale-95 transition-transform">
+            Start session
+          </button>
+        </div>
+      )}
+
+      {/* Monthly calendar */}
+      {activeTab === 'monthly' && <MonthlyCalendar />}
+
+      {/* Weekly reflection */}
+      {activeTab === 'weekly' && (
+      <div>
       <div className="bg-white rounded-3xl p-5 shadow-card border border-warm-100 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-base">🌙</span>
@@ -110,7 +142,7 @@ export default function ReflectPage() {
       </div>
 
       {/* Past reflections */}
-      {past.filter((r) => thisWeek ? r.id !== thisWeek.id : true).length > 0 && (
+      {activeTab === 'weekly' && past.filter((r) => thisWeek ? r.id !== thisWeek.id : true).length > 0 && (
         <div>
           <p className="text-sm font-medium text-warm-500 mb-3">Previous weeks</p>
           <div className="space-y-4">
@@ -136,6 +168,12 @@ export default function ReflectPage() {
           <p className="font-serif text-xl text-warm-300 mb-2">Your first reflection</p>
           <p className="text-warm-400 text-sm">Take a moment to look back at this week.</p>
         </div>
+      )}
+      </div>
+      )}
+
+      {showGuided && (
+        <GuidedJournal onClose={() => setShowGuided(false)} onSaved={() => setShowGuided(false)} />
       )}
     </div>
   );

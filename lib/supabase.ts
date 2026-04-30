@@ -115,3 +115,63 @@ export async function getGrowthStats() {
     reflectionsDone: reflections.count ?? 0,
   };
 }
+
+// ── User Articles ──────────────────────────────────────────────────────────
+
+export async function saveUserArticle(article: {
+  title: string; content?: string; source?: string; url?: string;
+  category_id?: string; category_name?: string; summary?: string; sentiment?: string;
+}) {
+  const deviceId = getDeviceId();
+  return supabase.from('user_articles').insert({ device_id: deviceId, ...article });
+}
+
+export async function getUserArticles() {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('user_articles').select('*').eq('device_id', deviceId)
+    .order('created_at', { ascending: false });
+  return data ?? [];
+}
+
+export async function deleteUserArticle(id: string) {
+  return supabase.from('user_articles').delete().eq('id', id);
+}
+
+// ── Guided Sessions ────────────────────────────────────────────────────────
+
+export async function saveGuidedSession(conversation: object[], completed = true) {
+  const deviceId = getDeviceId();
+  return supabase.from('guided_sessions').insert({ device_id: deviceId, conversation, completed });
+}
+
+export async function getGuidedSessions() {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('guided_sessions').select('*').eq('device_id', deviceId)
+    .order('created_at', { ascending: false });
+  return data ?? [];
+}
+
+// ── My Hub ─────────────────────────────────────────────────────────────────
+
+export async function saveHubItem(item: {
+  type: 'finding' | 'article' | 'note';
+  title: string; content?: string; source?: string; url?: string;
+  field?: string; tags?: string[];
+}) {
+  const deviceId = getDeviceId();
+  return supabase.from('hub_items').insert({ device_id: deviceId, ...item });
+}
+
+export async function getHubItems() {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('hub_items').select('*').eq('device_id', deviceId)
+    .order('created_at', { ascending: false });
+  return data ?? [];
+}
+
+export async function deleteHubItem(id: string) {
+  return supabase.from('hub_items').delete().eq('id', id);
+}
