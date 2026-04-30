@@ -1,157 +1,203 @@
 import { NextResponse } from 'next/server';
 import { XMLParser } from 'fast-xml-parser';
 
-const RSS_SOURCES = [
+const FIELDS = [
   {
     field: 'Behavioral',
+    keywords: ['behavior','habit','motivation','reward','learning','emotion','anxiety',
+      'stress','decision','cognitive','memory','attention','mood','depression','therapy',
+      'coping','fear','anger','mental','mindset','pattern','trigger','response','feeling'],
     urls: [
+      'https://bpsresearchdigest.com/feed/',
       'https://www.sciencedaily.com/rss/mind_brain/psychology.xml',
       'https://feeds.apa.org/apa/releases',
     ],
   },
   {
     field: 'I/O & Work',
+    keywords: ['work','workplace','team','leadership','organization','employee','burnout',
+      'productivity','job','career','manager','colleague','performance','collaboration',
+      'satisfaction','engagement','culture','office','meeting','deadline','feedback'],
     urls: [
       'https://www.sciencedaily.com/rss/mind_brain/educational_psychology.xml',
-      'https://www.psychologytoday.com/us/feed/rss',
+      'https://bpsresearchdigest.com/feed/',
+      'https://www.sciencedaily.com/rss/mind_brain/psychology.xml',
     ],
   },
   {
     field: 'Group & Social',
+    keywords: ['social','group','conformity','influence','peer','community','belonging',
+      'identity','relationship','trust','cooperation','conflict','communication','culture',
+      'norms','loneliness','connection','friendship','empathy','collective','crowd'],
     urls: [
       'https://www.sciencedaily.com/rss/mind_brain/social_psychology.xml',
+      'https://bpsresearchdigest.com/feed/',
     ],
   },
 ];
 
-const PSYCH_KEYWORDS = [
-  'resilience', 'attachment', 'motivation', 'bias', 'stress', 'anxiety',
-  'reward', 'habit', 'memory', 'emotion', 'trauma', 'cognition', 'behavior',
-  'identity', 'trust', 'empathy', 'autonomy', 'burnout', 'focus', 'decision',
-  'conflict', 'belonging', 'connection', 'growth', 'safety', 'control',
-  'pattern', 'trigger', 'regulation', 'mindset', 'perception', 'attention',
-  'learning', 'performance', 'wellbeing', 'purpose', 'creativity', 'influence',
-  'adaptation', 'gratitude', 'compassion', 'awareness', 'pressure', 'recovery',
-  'leadership', 'cooperation', 'conformity', 'loneliness', 'happiness', 'fear',
-  'confidence', 'self-esteem', 'withdrawal', 'engagement', 'satisfaction',
-];
-
 const STOP_WORDS = new Set([
-  'a','an','the','and','or','but','in','on','at','to','for','of','with',
-  'by','from','as','is','was','are','were','be','been','being','have','has',
-  'had','do','does','did','will','would','could','should','may','might','can',
-  'how','why','what','when','where','which','who','that','this','these','those',
-  'new','study','research','shows','finds','found','reveals','suggests','may',
-  'help','make','use','using','used','more','less','than','its','their','your',
-  'our','not','also','can','two','one','three','first','second','people',
+  'a','an','the','and','or','but','in','on','at','to','for','of','with','by',
+  'from','is','was','are','were','be','have','has','had','do','does','did',
+  'will','would','could','should','may','might','can','how','why','what',
+  'when','where','which','who','that','this','new','study','research',
+  'shows','finds','found','reveals','suggests','scientists','researchers',
 ]);
 
-function extractOneWord(title: string): string {
-  const lower = title.toLowerCase();
-  for (const kw of PSYCH_KEYWORDS) {
-    if (lower.includes(kw)) {
-      return kw.charAt(0).toUpperCase() + kw.slice(1);
-    }
+function scoreArticle(title: string, description: string, keywords: string[]): number {
+  const text = `${title} ${description}`.toLowerCase().replace(/[^a-z\s]/g, ' ');
+  const words = text.split(/\s+/).filter(w => w.length > 3 && !STOP_WORDS.has(w));
+  return keywords.filter(kw => words.includes(kw) || text.includes(kw)).length;
+}
+
+function extractUrl(item: Record<string, unknown>): string {
+  // Try multiple RSS/Atom link formats
+  if (typeof item.link === 'string' && item.link.startsWith('http')) return item.link;
+  if (typeof item.link === 'object' && item.link !== null) {
+    const l = item.link as Record<string, unknown>;
+    if (typeof l['@_href'] === 'string') return l['@_href'];
+    if (typeof l['#text'] === 'string') return l['#text'];
   }
-  const words = title
-    .split(/\s+/)
-    .map((w) => w.replace(/[^a-zA-Z]/g, ''))
-    .filter((w) => w.length > 4 && !STOP_WORDS.has(w.toLowerCase()));
-  if (words.length > 0) {
-    return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+  if (typeof item.guid === 'string' && item.guid.startsWith('http')) return item.guid;
+  if (typeof item.guid === 'object' && item.guid !== null) {
+    const g = item.guid as Record<string, unknown>;
+    if (typeof g['#text'] === 'string' && (g['#text'] as string).startsWith('http')) return g['#text'] as string;
   }
-  return 'Insight';
+  return '';
+}
+
+function extractText(val: unknown): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && val !== null) {
+    const v = val as Record<string, unknown>;
+    return (v['#text'] as string) ?? '';
+  }
+  return '';
 }
 
 function stripHtml(html: string): string {
-  return html?.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').trim() ?? '';
+  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#\d+;/g,'').trim();
 }
 
-async function fetchRSS(url: string) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'PsychHub/1.0' },
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const xml = await res.text();
-  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
-  return parser.parse(xml);
-}
-
-async function getOneArticle(field: string, urls: string[]) {
-  for (const url of urls) {
-    try {
-      const parsed = await fetchRSS(url);
-      const channel = parsed?.rss?.channel ?? parsed?.feed;
-      const items: Record<string, string>[] = channel?.item ?? channel?.entry ?? [];
-      if (!items.length) continue;
-
-      // Pick today's item by rotating on day of year
-      const dayOfYear = Math.floor(
-        (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-      );
-      const item = items[dayOfYear % items.length];
-      const title = stripHtml(
-        typeof item.title === 'object' ? (item.title as Record<string, string>)['#text'] ?? '' : item.title ?? ''
-      );
-      const summary = stripHtml(
-        item.description ?? item.summary ?? item['content:encoded'] ?? ''
-      ).slice(0, 200);
-      const link = item.link ?? item.guid ?? url;
-      const pubDate = item.pubDate ?? item.published ?? '';
-
-      return {
-        field,
-        title: title || 'Psychology finding',
-        summary,
-        source: new URL(url).hostname.replace('www.', ''),
-        url: typeof link === 'object' ? (link as Record<string, string>)['@_href'] ?? url : link,
-        oneWord: extractOneWord(title),
-        pubDate: pubDate ? new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
-      };
-    } catch {
-      continue;
-    }
+function extractOneWord(title: string): string {
+  const psychKeywords = [
+    'resilience','attachment','motivation','bias','stress','anxiety','reward','habit',
+    'memory','emotion','trauma','cognition','behavior','identity','trust','empathy',
+    'autonomy','burnout','focus','decision','conflict','belonging','connection','growth',
+    'safety','control','pattern','regulation','mindset','perception','attention',
+    'learning','performance','wellbeing','purpose','creativity','influence','adaptation',
+    'gratitude','compassion','awareness','pressure','recovery','loneliness','happiness',
+    'confidence','engagement','satisfaction','conformity','cooperation','leadership',
+  ];
+  const lower = title.toLowerCase();
+  for (const kw of psychKeywords) {
+    if (lower.includes(kw)) return kw.charAt(0).toUpperCase() + kw.slice(1);
   }
-  return null;
+  const words = title.split(/\s+/)
+    .map(w => w.replace(/[^a-zA-Z]/g, ''))
+    .filter(w => w.length > 4 && !STOP_WORDS.has(w.toLowerCase()));
+  return words.length > 0
+    ? words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase()
+    : 'Insight';
 }
 
-// Fallback findings if RSS is unavailable
+async function fetchItems(url: string): Promise<Record<string, unknown>[]> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'PsychHub/1.0 (personal learning app)' },
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+    const parsed = parser.parse(xml);
+    const channel = parsed?.rss?.channel ?? parsed?.feed;
+    const items = channel?.item ?? channel?.entry ?? [];
+    return Array.isArray(items) ? items : [items];
+  } catch {
+    return [];
+  }
+}
+
+async function getBestArticle(fieldConfig: typeof FIELDS[0]) {
+  const allItems: Record<string, unknown>[] = [];
+
+  for (const url of fieldConfig.urls) {
+    const items = await fetchItems(url);
+    allItems.push(...items.slice(0, 15));
+    if (allItems.length >= 20) break;
+  }
+
+  if (allItems.length === 0) return null;
+
+  // Score each article against field keywords
+  const scored = allItems.map(item => {
+    const title = stripHtml(extractText(item.title));
+    const desc = stripHtml(extractText(item.description ?? item.summary ?? item['content:encoded'] ?? ''));
+    const score = scoreArticle(title, desc, fieldConfig.keywords);
+    return { item, title, desc, score };
+  });
+
+  // Sort by relevance, then rotate by day to get variety
+  const relevant = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+  const pool = relevant.length > 0 ? relevant : scored;
+
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  const pick = pool[dayOfYear % pool.length];
+
+  const url = extractUrl(pick.item);
+  const pubDate = extractText(pick.item.pubDate ?? pick.item.published ?? '');
+  const source = (() => {
+    try { return new URL(fieldConfig.urls[0]).hostname.replace('www.', ''); }
+    catch { return 'Psychology Research'; }
+  })();
+
+  return {
+    field: fieldConfig.field,
+    title: pick.title || 'Psychology finding',
+    summary: pick.desc.slice(0, 280) || '',
+    source,
+    url,
+    oneWord: extractOneWord(pick.title),
+    pubDate: pubDate ? (() => { try { return new Date(pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return ''; } })() : '',
+  };
+}
+
 const FALLBACKS = [
   {
     field: 'Behavioral',
     title: 'Habits form through consistent context cues, not willpower alone',
-    summary: 'Research shows that environment design is more powerful than motivation for building lasting habits.',
+    summary: 'Environment design is more powerful than motivation for building lasting habits. The context around us shapes our automatic responses more than conscious effort.',
     source: 'European Journal of Social Psychology',
-    url: 'https://www.apa.org',
+    url: 'https://www.apa.org/topics/behavioral-health',
     oneWord: 'Habit',
     pubDate: '',
   },
   {
     field: 'I/O & Work',
     title: 'Psychological safety at work predicts team innovation and error reporting',
-    summary: 'Teams where members feel safe to speak up without fear show higher performance and creativity.',
+    summary: 'Teams where members feel safe to speak up without fear show higher performance, creativity, and willingness to flag problems early.',
     source: 'Journal of Applied Psychology',
-    url: 'https://www.apa.org',
+    url: 'https://www.apa.org/topics/work-stress',
     oneWord: 'Safety',
     pubDate: '',
   },
   {
     field: 'Group & Social',
     title: 'Social conformity pressure activates threat-detection regions of the brain',
-    summary: 'Disagreeing with group consensus triggers the same neural pathways as physical threat perception.',
+    summary: 'Disagreeing with group consensus triggers the same neural pathways as physical threat perception, explaining why speaking up feels genuinely dangerous.',
     source: 'Biological Psychiatry',
-    url: 'https://www.sciencedirect.com',
+    url: 'https://www.apa.org/topics/social-connections',
     oneWord: 'Conformity',
     pubDate: '',
   },
 ];
 
 export async function GET() {
-  const results = await Promise.all(
-    RSS_SOURCES.map((s) => getOneArticle(s.field, s.urls))
-  );
-
+  const results = await Promise.all(FIELDS.map(getBestArticle));
   const findings = results.map((r, i) => r ?? FALLBACKS[i]);
 
   return NextResponse.json(findings, {
