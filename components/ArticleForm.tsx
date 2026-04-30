@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { categorizeArticle, extractiveSummarize, analyzeSentiment } from '@/lib/nlp';
-import { summarizeWithAI } from '@/lib/ai';
+import { summarizeWithAI, AI_STATUS_MESSAGES } from '@/lib/ai';
 import { saveUserArticle } from '@/lib/supabase';
 
 const categoryColors: Record<string, string> = {
@@ -26,6 +26,7 @@ export default function ArticleForm({ onSaved, onClose }: Props) {
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     if (!title.trim()) return;
@@ -33,8 +34,10 @@ export default function ArticleForm({ onSaved, onClose }: Props) {
     const category = categorizeArticle(title, content);
     const sentiment = analyzeSentiment(content || title);
     let summary = extractiveSummarize(content || title);
-    const aiSummary = await summarizeWithAI(title, content || title);
+    const { summary: aiSummary, status } = await summarizeWithAI(title, content || title);
     if (aiSummary) summary = aiSummary;
+    const notice = AI_STATUS_MESSAGES[status];
+    if (notice) { setAiNotice(notice); setTimeout(() => setAiNotice(null), 6000); }
     setPreview({ category, summary, sentiment });
     setAnalyzing(false);
   };
@@ -64,6 +67,13 @@ export default function ArticleForm({ onSaved, onClose }: Props) {
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}>
 
         <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto mb-5" />
+
+        {/* AI status toast */}
+        {aiNotice && (
+          <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-700 leading-relaxed animate-fade-in">
+            ⚠️ {aiNotice}
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-serif text-xl text-warm-900">Add article</h2>
