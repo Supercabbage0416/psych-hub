@@ -32,7 +32,7 @@ export default function ArticlesPage() {
 
   useEffect(() => { load(); }, []);
 
-  const filters = [...new Set(articles.map((a) => a.category_id).filter(Boolean))];
+  const filters = Array.from(new Set(articles.map((a) => a.category_id).filter(Boolean)));
   const filtered = activeFilter ? articles.filter((a) => a.category_id === activeFilter) : articles;
 
   const handleSaveToHub = async (article: Article) => {

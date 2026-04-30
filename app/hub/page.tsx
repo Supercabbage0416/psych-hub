@@ -30,7 +30,7 @@ export default function HubPage() {
 
   useEffect(() => { load(); }, []);
 
-  const types = [...new Set(items.map((i) => i.type))];
+  const types = Array.from(new Set(items.map((i) => i.type)));
 
   const filtered = items.filter((item) => {
     const matchType = !activeType || item.type === activeType;
