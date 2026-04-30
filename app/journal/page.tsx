@@ -33,7 +33,7 @@ export default function JournalPage() {
 
   useEffect(() => { load(); }, []);
 
-  const allTags = [...new Set(entries.flatMap((e) => e.tags))];
+  const allTags = Array.from(new Set(entries.flatMap((e) => e.tags)));
   const filtered = activeTag ? entries.filter((e) => e.tags.includes(activeTag)) : entries;
 
   const weekAiContext = entries.slice(0, 7).map((e) => `"${e.content}"`).join('\n');
