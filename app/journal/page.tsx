@@ -5,6 +5,7 @@ import { getJournalEntries } from '@/lib/supabase';
 import { tagColors } from '@/lib/tags';
 import ThoughtCapture from '@/components/ThoughtCapture';
 import ReflectWithAI from '@/components/ReflectWithAI';
+import MoodHistory from '@/components/MoodHistory';
 
 interface Entry {
   id: string;
@@ -52,6 +53,11 @@ export default function JournalPage() {
         >
           + New
         </button>
+      </div>
+
+      {/* Mood history */}
+      <div className="mb-5">
+        <MoodHistory />
       </div>
 
       {/* Tag filter */}
