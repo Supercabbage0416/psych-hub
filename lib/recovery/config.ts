@@ -64,6 +64,11 @@ export const STAGES: Stage[] = [
         text: 'What is one thing you did today, even if very small?',
         type: 'text',
       },
+      {
+        id: 'thoughts',
+        text: "What's on your mind right now? Any thought, worry, or observation — just let it land here.",
+        type: 'text',
+      },
     ],
     feedbackMessages: [
       'Small still counts.',
@@ -141,6 +146,11 @@ export const STAGES: Stage[] = [
         text: 'What made it easier or harder?',
         type: 'text',
       },
+      {
+        id: 'thoughts',
+        text: "What's on your mind right now? Any thought, worry, or observation — just let it land here.",
+        type: 'text',
+      },
     ],
     feedbackMessages: [
       'Finishing something small is a real signal to your brain.',
@@ -216,6 +226,11 @@ export const STAGES: Stage[] = [
       {
         id: 'learned',
         text: 'What did you learn about what you need?',
+        type: 'text',
+      },
+      {
+        id: 'thoughts',
+        text: "What's on your mind right now? Any thought, worry, or observation — just let it land here.",
         type: 'text',
       },
     ],
@@ -323,6 +338,11 @@ export const STAGES: Stage[] = [
           { value: 'unsure', label: 'Not sure' },
         ],
       },
+      {
+        id: 'thoughts',
+        text: "What's on your mind right now? Any thought, worry, or observation — just let it land here.",
+        type: 'text',
+      },
     ],
     feedbackMessages: [
       'A social moment does not need to be perfect to be safe.',
@@ -403,6 +423,11 @@ export const STAGES: Stage[] = [
       {
         id: 'kind_words',
         text: 'What would you say to yourself, kindly?',
+        type: 'text',
+      },
+      {
+        id: 'thoughts',
+        text: "What's on your mind right now? Any thought, worry, or observation — just let it land here.",
         type: 'text',
       },
     ],

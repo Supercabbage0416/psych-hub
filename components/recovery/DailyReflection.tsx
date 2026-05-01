@@ -190,8 +190,10 @@ export default function DailyReflection({ state, onStateChange, onClose }: Props
             <textarea
               value={answer}
               onChange={e => handleText(e.target.value)}
-              placeholder="Write anything — even a few words is enough."
-              rows={4}
+              placeholder={current.id === 'thoughts'
+                ? "No filter needed — whatever is floating around..."
+                : "Write anything — even a few words is enough."}
+              rows={current.id === 'thoughts' ? 5 : 4}
               className="w-full bg-white border border-warm-100 rounded-2xl px-4 py-3 text-sm text-warm-800 placeholder-warm-300 resize-none focus:outline-none focus:border-warm-300"
             />
           )}

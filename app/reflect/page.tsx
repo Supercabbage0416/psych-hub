@@ -6,6 +6,7 @@ import { getWeeklyObservationPrompt } from '@/lib/prompts';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
 import GuidedJournal from '@/components/GuidedJournal';
 import ReflectWithAI from '@/components/ReflectWithAI';
+import ReflectionInsight from '@/components/ReflectionInsight';
 
 interface Reflection {
   id: string;
@@ -25,7 +26,7 @@ export default function ReflectPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [weekContext, setWeekContext] = useState('');
-  const [activeTab, setActiveTab] = useState<'weekly' | 'monthly' | 'guided'>('weekly');
+  const [activeTab, setActiveTab] = useState<'weekly' | 'monthly' | 'guided' | 'ai'>('weekly');
   const [showGuided, setShowGuided] = useState(false);
   const observationPrompt = getWeeklyObservationPrompt();
 
@@ -79,11 +80,11 @@ export default function ReflectPage() {
 
       {/* Tab switcher */}
       <div className="flex gap-1 bg-warm-100 p-1 rounded-2xl mb-6">
-        {(['weekly', 'monthly', 'guided'] as const).map((tab) => (
+        {(['weekly', 'monthly', 'guided', 'ai'] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2 text-xs font-medium rounded-xl capitalize transition-all ${
               activeTab === tab ? 'bg-white text-warm-800 shadow-card' : 'text-warm-400'}`}>
-            {tab === 'guided' ? '🌿 Guided' : tab === 'monthly' ? '📅 Monthly' : '🌙 Weekly'}
+            {tab === 'guided' ? '🌿 Guided' : tab === 'monthly' ? '📅 Monthly' : tab === 'ai' ? '✨ AI' : '🌙 Weekly'}
           </button>
         ))}
       </div>
@@ -99,6 +100,9 @@ export default function ReflectPage() {
           </button>
         </div>
       )}
+
+      {/* AI insight */}
+      {activeTab === 'ai' && <ReflectionInsight />}
 
       {/* Monthly calendar */}
       {activeTab === 'monthly' && <MonthlyCalendar />}

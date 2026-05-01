@@ -175,3 +175,29 @@ export async function getHubItems() {
 export async function deleteHubItem(id: string) {
   return supabase.from('hub_items').delete().eq('id', id);
 }
+
+export async function saveReflectionInsight(insight: {
+  mood: string; motivation: string; status: string;
+  recommendation: string; reasoning: string;
+  thread: { role: string; content: string }[];
+}) {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('reflection_insights')
+    .insert({ device_id: deviceId, ...insight })
+    .select()
+    .single();
+  return data;
+}
+
+export async function getLatestInsight() {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('reflection_insights')
+    .select('*')
+    .eq('device_id', deviceId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data ?? null;
+}
