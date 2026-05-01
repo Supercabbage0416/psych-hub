@@ -59,11 +59,12 @@ const STEPS = [
 interface Props {
   onComplete: (checkIn: PartialCheckIn) => void;
   onClose?: () => void;
+  initialValues?: PartialCheckIn;
 }
 
-export default function DailyCheckIn({ onComplete, onClose }: Props) {
+export default function DailyCheckIn({ onComplete, onClose, initialValues }: Props) {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<PartialCheckIn>({ mood: 'okay' });
+  const [answers, setAnswers] = useState<PartialCheckIn>(initialValues ?? { mood: 'okay' });
   const [saving, setSaving] = useState(false);
 
   const current = STEPS[step];

@@ -135,6 +135,7 @@ export default function HomePage() {
         <DailyCheckIn
           onComplete={handleCheckInComplete}
           onClose={() => setShowCheckIn(false)}
+          initialValues={checkIn ?? undefined}
         />
       )}
       {showJournal && (
