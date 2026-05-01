@@ -8,14 +8,16 @@ import DailyReflection from '@/components/recovery/DailyReflection';
 import PatternTracker from '@/components/recovery/PatternTracker';
 import WeeklyReview from '@/components/recovery/WeeklyReview';
 import StageReview from '@/components/recovery/StageReview';
+import AIInsights from '@/components/recovery/AIInsights';
 
-type Tab = 'today' | 'progress' | 'weekly' | 'stage';
+type Tab = 'today' | 'progress' | 'weekly' | 'stage' | 'insights';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'today',    label: 'Today' },
   { id: 'progress', label: 'Progress' },
   { id: 'weekly',   label: 'Weekly' },
   { id: 'stage',    label: 'Stage' },
+  { id: 'insights', label: 'AI' },
 ];
 
 export default function RecoverPage() {
@@ -77,6 +79,7 @@ export default function RecoverPage() {
       {tab === 'progress' && <PatternTracker state={state} />}
       {tab === 'weekly'   && <WeeklyReview state={state} />}
       {tab === 'stage'    && <StageReview state={state} onStateChange={handleStateChange} />}
+      {tab === 'insights' && <AIInsights state={state} />}
 
       {/* Daily reflection modal */}
       {showReflection && (

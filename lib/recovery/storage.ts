@@ -1,6 +1,7 @@
 import type { RecoveryState, DailyRecord } from './types';
 import { STAGE_ORDER } from './config';
 import { shouldActivateLowEnergy } from './scoring';
+import { supabase, getDeviceId } from '@/lib/supabase';
 
 const KEY = 'recovery_state_v1';
 
@@ -27,6 +28,7 @@ export function loadState(): RecoveryState {
 export function saveState(state: RecoveryState): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(KEY, JSON.stringify(state));
+  syncStateToSupabase(state).catch(() => {});
 }
 
 export function getTodayRecord(state: RecoveryState): DailyRecord | null {
@@ -42,8 +44,6 @@ export function addDailyRecord(state: RecoveryState, record: DailyRecord): Recov
 
   const updated: RecoveryState = { ...state, records };
 
-  // Update streaks
-  const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   const yesterdayRecord = records.find(r => r.date === yesterday);
 
@@ -56,8 +56,10 @@ export function addDailyRecord(state: RecoveryState, record: DailyRecord): Recov
       ? state.successStreak + 1 : 1;
   }
 
-  // Auto-activate low energy mode after 3 consecutive skips
   updated.lowEnergyMode = shouldActivateLowEnergy(updated);
+
+  // Persist to Supabase in background
+  syncRecordToSupabase(record).catch(() => {});
 
   return updated;
 }
@@ -75,18 +77,70 @@ export function advanceStage(state: RecoveryState): RecoveryState {
   };
 }
 
-export function extendStage(state: RecoveryState): RecoveryState {
-  return { ...state };
-}
-
 export function activateLowEnergyMode(state: RecoveryState): RecoveryState {
-  const updated = { ...state, lowEnergyMode: true };
-  saveState(updated);
-  return updated;
+  return { ...state, lowEnergyMode: true };
 }
 
 export function deactivateLowEnergyMode(state: RecoveryState): RecoveryState {
-  const updated = { ...state, lowEnergyMode: false };
-  saveState(updated);
-  return updated;
+  return { ...state, lowEnergyMode: false };
+}
+
+// --- Supabase sync (fire-and-forget) ---
+
+async function syncRecordToSupabase(record: DailyRecord): Promise<void> {
+  const deviceId = getDeviceId();
+  if (!deviceId) return;
+  await supabase.from('recovery_records').upsert({
+    device_id: deviceId,
+    date: record.date,
+    stage_id: record.stageId,
+    nudge: record.nudge,
+    low_energy_mode: record.lowEnergyMode,
+    completion: record.completion,
+    energy: record.energy,
+    effectiveness: record.effectiveness,
+    action_score: record.actionScore,
+    effectiveness_score: record.effectivenessScore,
+    reflections: record.reflections,
+    feedback: record.feedback,
+  }, { onConflict: 'device_id,date' });
+}
+
+async function syncStateToSupabase(state: RecoveryState): Promise<void> {
+  const deviceId = getDeviceId();
+  if (!deviceId) return;
+  await supabase.from('recovery_state').upsert({
+    device_id: deviceId,
+    current_stage: state.currentStage,
+    stage_start_date: state.stageStartDate,
+    low_energy_mode: state.lowEnergyMode,
+    low_energy_streak: state.lowEnergyStreak,
+    success_streak: state.successStreak,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'device_id' });
+}
+
+// Load records from Supabase (for cross-device or backup restore)
+export async function loadRecordsFromSupabase(): Promise<DailyRecord[]> {
+  const deviceId = getDeviceId();
+  if (!deviceId) return [];
+  const { data } = await supabase
+    .from('recovery_records')
+    .select('*')
+    .eq('device_id', deviceId)
+    .order('date', { ascending: true });
+  if (!data) return [];
+  return data.map(r => ({
+    date: r.date,
+    stageId: r.stage_id,
+    nudge: r.nudge ?? '',
+    lowEnergyMode: r.low_energy_mode ?? false,
+    completion: r.completion ?? 'skipped',
+    energy: r.energy ?? 'low',
+    effectiveness: r.effectiveness ?? 'neutral',
+    actionScore: r.action_score ?? 0,
+    effectivenessScore: r.effectiveness_score ?? 0,
+    reflections: r.reflections ?? {},
+    feedback: r.feedback ?? '',
+  }));
 }

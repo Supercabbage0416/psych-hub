@@ -136,7 +136,7 @@ async function fetchFieldItems(
         const title = stripHtml(extractText(item.title));
         const desc = stripHtml(extractText(
           item.description ?? item.summary ?? item['content:encoded'] ?? ''
-        )).slice(0, 500);
+        )).slice(0, 2000);
 
         if (title.length < 10) continue;
         if (!passesGate(title, desc, mustContain, mustNotContain)) continue;

@@ -140,8 +140,11 @@ export default function DailyFindings() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v4_${today}`;
+    const cacheKey = `findings_v5_${today}`;
     const cached = localStorage.getItem(cacheKey);
+
+    // Clean up older cache versions
+    ['v2', 'v3', 'v4'].forEach(v => localStorage.removeItem(`findings_${v}_${today}`));
 
     if (cached) {
       try {
@@ -180,8 +183,6 @@ export default function DailyFindings() {
           results.push(finding);
         }
 
-        // Clean up old cache versions
-        localStorage.removeItem(`findings_v2_${today}`);
         localStorage.setItem(cacheKey, JSON.stringify(results));
         setFindings(results);
         setLoading(false);
