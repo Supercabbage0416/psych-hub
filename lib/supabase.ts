@@ -228,6 +228,44 @@ export async function saveCheckIn(checkIn: {
   );
 }
 
+// ── Lessons ────────────────────────────────────────────────────────────────
+
+export async function createLesson(input: {
+  text: string;
+  thoughts?: string | null;
+  mood: { emoji: string; word: string };
+}) {
+  const deviceId = getDeviceId();
+  return supabase.from('lessons').insert({
+    device_id: deviceId,
+    text: input.text,
+    thoughts: input.thoughts ?? null,
+    mood_emoji: input.mood.emoji,
+    mood_word: input.mood.word,
+  });
+}
+
+export async function listLessons(filter?: { mood?: string }) {
+  const deviceId = getDeviceId();
+  let query = supabase
+    .from('lessons')
+    .select('*')
+    .eq('device_id', deviceId)
+    .order('created_at', { ascending: false });
+  if (filter?.mood) query = query.eq('mood_word', filter.mood);
+  const { data } = await query;
+  return (data ?? []).map((row: {
+    id: string; text: string; thoughts: string | null;
+    created_at: string; mood_emoji: string; mood_word: string;
+  }) => ({
+    id: row.id,
+    text: row.text,
+    thoughts: row.thoughts,
+    createdAt: row.created_at,
+    mood: { emoji: row.mood_emoji, word: row.mood_word },
+  }));
+}
+
 export async function getTodayCheckIn() {
   const deviceId = getDeviceId();
   const today = new Date().toISOString().split('T')[0];

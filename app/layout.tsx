@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Nunito, Lora } from 'next/font/google';
 import './globals.css';
+import './styles/cozy-room.css';
 import BottomNav from '@/components/BottomNav';
 
 const nunito = Nunito({

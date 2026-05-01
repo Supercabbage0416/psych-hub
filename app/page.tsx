@@ -7,22 +7,30 @@ import ThoughtCapture from '@/components/ThoughtCapture';
 import DailyCheckIn from '@/components/DailyCheckIn';
 import CheckInSummary from '@/components/CheckInSummary';
 import RecoveryNudgeCard from '@/components/RecoveryNudgeCard';
-import { getTodayCheckIn } from '@/lib/supabase';
+import CozyRoom from '@/components/CozyRoom';
+import ReflectionBox from '@/components/ReflectionBox';
+import { getTodayCheckIn, createLesson } from '@/lib/supabase';
 import type { PartialCheckIn } from '@/lib/checkin';
 import { getCategoriesForCheckIn, getCategoryReason } from '@/lib/articleCategories';
 import type { CategoryId } from '@/lib/articleCategories';
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
 
 function formatDate() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+const MOOD_DISPLAY: Record<string, { emoji: string; word: string }> = {
+  calm:      { emoji: '🌿', word: 'calm' },
+  heavy:     { emoji: '🌫️', word: 'heavy' },
+  anxious:   { emoji: '⚡', word: 'anxious' },
+  alive:     { emoji: '✨', word: 'alive' },
+  okay:      { emoji: '🌤️', word: 'okay' },
+  scattered: { emoji: '💭', word: 'scattered' },
+  numb:      { emoji: '🩶', word: 'numb' },
+};
+
+function getMoodDisplay(mood: string) {
+  return MOOD_DISPLAY[mood] ?? { emoji: '🌙', word: mood };
+}
 
 export default function HomePage() {
   const [checkIn, setCheckIn] = useState<PartialCheckIn | null>(null);
@@ -73,77 +81,97 @@ export default function HomePage() {
     );
   }
 
+  const currentMood = getMoodDisplay(checkIn?.mood ?? 'okay');
+
   return (
-    <div className="px-5 pt-8 pb-28 animate-fade-in">
-      {/* Header */}
-      <div className="mb-6">
-        <p className="text-warm-400 text-sm mb-0.5">{formatDate()}</p>
-        <h1 className="font-serif text-3xl text-warm-900">Tonight</h1>
-      </div>
+    <div style={{ position: 'relative', minHeight: '100svh', overflow: 'hidden' }}>
+      <CozyRoom />
 
-      {/* Section 1: How am I today? */}
-      <section className="mb-5">
-        <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">How am I today?</p>
-        {checkIn ? (
-          <CheckInSummary checkIn={checkIn} onEdit={() => setShowCheckIn(true)} />
-        ) : (
-          <button onClick={() => setShowCheckIn(true)}
-            className="w-full bg-white rounded-3xl p-5 shadow-card border border-warm-100 text-left">
-            <p className="text-warm-400 text-sm mb-1">You haven't checked in yet</p>
-            <p className="text-sage text-sm font-medium">Tap to start daily check-in →</p>
-          </button>
-        )}
-      </section>
+      <div className="relative z-10 px-5 pt-8 pb-28 animate-fade-in">
+        {/* Header */}
+        <div className="mb-6">
+          <p className="text-warm-400 text-sm mb-0.5">{formatDate()}</p>
+          <h1 className="font-serif text-3xl text-warm-900">Tonight</h1>
+          <p className="text-warm-300 text-xs mt-0.5">Pull up a chair. Set the day down.</p>
+        </div>
 
-      {/* Section 2: One small thing I can do */}
-      <section className="mb-5">
-        <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">One small thing</p>
-        <RecoveryNudgeCard />
-      </section>
-
-      {/* Section 3: What can help me understand myself today? */}
-      {categories.length > 0 && (
+        {/* Check-in */}
         <section className="mb-5">
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="text-xs text-warm-400 uppercase tracking-wide">For you today</p>
-            <span className="text-xs text-warm-300">{categories.length} matched topics</span>
-          </div>
-          <DailyFindings categories={categories} reasonMap={reasonMap} />
+          <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">How am I today?</p>
+          {checkIn ? (
+            <CheckInSummary checkIn={checkIn} onEdit={() => setShowCheckIn(true)} />
+          ) : (
+            <button onClick={() => setShowCheckIn(true)}
+              className="w-full bg-white rounded-3xl p-5 shadow-card border border-warm-100 text-left">
+              <p className="text-warm-400 text-sm mb-1">You haven't checked in yet</p>
+              <p className="text-sage text-sm font-medium">Tap to start daily check-in →</p>
+            </button>
+          )}
         </section>
-      )}
 
-      {/* Growth markers */}
-      <section className="mb-6">
-        <GrowthMarkers />
-      </section>
+        {/* Recovery nudge */}
+        <section className="mb-5">
+          <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">One small thing</p>
+          <RecoveryNudgeCard />
+        </section>
 
-      {/* Floating journal button */}
-      <button
-        onClick={() => setShowJournal(true)}
-        className="fixed right-5 w-14 h-14 bg-sage rounded-full shadow-soft flex items-center justify-center active:scale-95 transition-transform z-40"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-        aria-label="Capture thought"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
+        {/* Reflection ritual */}
+        <section className="mb-5">
+          <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">By the fire</p>
+          <ReflectionBox
+            currentMood={currentMood}
+            onBurn={async ({ lesson, mood }) => {
+              await createLesson({ text: lesson, mood });
+            }}
+            onStore={async ({ lesson, thoughts, mood }) => {
+              await createLesson({ text: lesson, thoughts, mood });
+            }}
+          />
+        </section>
 
-      {/* Modals */}
-      {showCheckIn && (
-        <DailyCheckIn
-          onComplete={handleCheckInComplete}
-          onClose={() => setShowCheckIn(false)}
-          initialValues={checkIn ?? undefined}
-        />
-      )}
-      {showJournal && (
-        <ThoughtCapture
-          onClose={() => setShowJournal(false)}
-          onSaved={() => setShowJournal(false)}
-        />
-      )}
+        {/* Article feed */}
+        {categories.length > 0 && (
+          <section className="mb-5">
+            <div className="flex items-baseline justify-between mb-3">
+              <p className="text-xs text-warm-400 uppercase tracking-wide">For you tonight</p>
+              <span className="text-xs text-warm-300">{categories.length} topics</span>
+            </div>
+            <DailyFindings categories={categories} reasonMap={reasonMap} />
+          </section>
+        )}
+
+        {/* Growth markers */}
+        <section className="mb-6">
+          <GrowthMarkers />
+        </section>
+
+        {/* Journal FAB */}
+        <button
+          onClick={() => setShowJournal(true)}
+          className="fixed right-5 w-14 h-14 bg-sage rounded-full shadow-soft flex items-center justify-center active:scale-95 transition-transform z-40"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+          aria-label="Capture thought"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+
+        {showCheckIn && (
+          <DailyCheckIn
+            onComplete={handleCheckInComplete}
+            onClose={() => setShowCheckIn(false)}
+            initialValues={checkIn ?? undefined}
+          />
+        )}
+        {showJournal && (
+          <ThoughtCapture
+            onClose={() => setShowJournal(false)}
+            onSaved={() => setShowJournal(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }

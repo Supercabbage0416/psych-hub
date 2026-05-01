@@ -19,7 +19,7 @@ const tabs = [
   },
   {
     href: '/recover',
-    label: 'Mend',
+    label: 'Recover',
     icon: (active: boolean) => (
       // Leaf
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +30,7 @@ const tabs = [
   },
   {
     href: '/journal',
-    label: 'Pages',
+    label: 'Journal',
     icon: (active: boolean) => (
       // Pen / edit
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -40,7 +40,7 @@ const tabs = [
   },
   {
     href: '/hub',
-    label: 'Keepsakes',
+    label: 'Saved',
     icon: (active: boolean) => (
       // Heart
       <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? ACTIVE : 'none'} stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -50,7 +50,7 @@ const tabs = [
   },
   {
     href: '/reflect',
-    label: 'Patterns',
+    label: 'Reflect',
     icon: (active: boolean) => (
       // Waves
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
