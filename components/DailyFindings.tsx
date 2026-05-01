@@ -129,7 +129,7 @@ export default function DailyFindings() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v2_${today}`;
+    const cacheKey = `findings_v3_${today}`;
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
@@ -169,6 +169,8 @@ export default function DailyFindings() {
           results.push(finding);
         }
 
+        // Clean up old cache versions
+        localStorage.removeItem(`findings_v2_${today}`);
         localStorage.setItem(cacheKey, JSON.stringify(results));
         setFindings(results);
         setLoading(false);

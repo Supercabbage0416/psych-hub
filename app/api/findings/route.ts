@@ -1,47 +1,60 @@
 import { NextResponse } from 'next/server';
 import { XMLParser } from 'fast-xml-parser';
 
-// Returns raw RSS items per field — DeepSeek selection happens client-side
-// to avoid Vercel's 10-second serverless function timeout
+// Each field has dedicated, non-overlapping RSS sources + keyword gates
+// to block obviously off-topic articles before DeepSeek sees them.
 
 const FIELDS = [
   {
     id: 'behavioral',
     field: 'Behavioral',
+    // Sources: dedicated behavioral/cognitive science outlets
     urls: [
-      'https://bpsresearchdigest.com/feed/',
       'https://behavioralscientist.org/feed/',
-      'https://www.sciencedaily.com/rss/mind_brain/psychology.xml',
+      'https://bpsresearchdigest.com/feed/',
+      'https://digest.bps.org.uk/feed/',
     ],
+    // Must contain at least one of these in title/desc
+    mustContain: ['habit', 'behav', 'cognit', 'decision', 'emotion', 'motivat', 'bias', 'mental', 'mind', 'psycholog', 'pattern', 'think', 'self'],
+    // Reject if title contains any of these
+    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'disease', 'drug', 'surgery', 'vaccine', 'hospital', 'artificial intelligence', ' ai ', 'chatgpt', 'robot', 'machine learning', 'climate', 'election', 'stock'],
   },
   {
     id: 'io_work',
     field: 'I/O & Work',
+    // Sources: dedicated workplace/organizational psychology outlets
     urls: [
       'https://www.ioatwork.com/feed/',
       'https://workdesignmagazine.com/feed/',
       'https://sloanreview.mit.edu/feed/',
       'https://hbr.org/feed',
-      'https://www.sciencedaily.com/rss/mind_brain/educational_psychology.xml',
     ],
+    mustContain: ['team', 'leader', 'workplace', 'employ', 'organiz', 'manage', 'work', 'job', 'burnout', 'collabor', 'productiv', 'perform', 'culture', 'engag'],
+    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'vaccine', 'surgery', 'hospital', 'drug', 'artificial intelligence', ' ai model', 'chatgpt', 'climate', 'election', 'stock market'],
   },
   {
     id: 'group_social',
     field: 'Group & Social',
+    // Sources: specifically social psychology RSS — NOT shared with behavioral
     urls: [
       'https://www.sciencedaily.com/rss/mind_brain/social_psychology.xml',
-      'https://bpsresearchdigest.com/feed/',
-      'https://behavioralscientist.org/feed/',
+      'https://greatergood.berkeley.edu/feeds/news',
+      'https://psycnet.apa.org/rss/journal/gd0',
     ],
+    mustContain: ['social', 'group', 'community', 'relationship', 'belonging', 'conform', 'peer', 'connect', 'loneli', 'friend', 'trust', 'identity', 'norms', 'influenc', 'cooperat'],
+    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'vaccine', 'drug', 'surgery', 'hospital', 'artificial intelligence', 'machine learning', 'robot', 'climate change', 'election', 'stock'],
   },
   {
     id: 'stress_release',
     field: 'Stress & Recovery',
+    // Sources: mindfulness/wellbeing specific — NOT sciencedaily general
     urls: [
-      'https://greatergood.berkeley.edu/feeds/news',
       'https://www.mindful.org/feed/',
       'https://www.sciencedaily.com/rss/mind_brain/stress.xml',
+      'https://www.apa.org/rss/news.xml',
     ],
+    mustContain: ['stress', 'sleep', 'mindful', 'meditat', 'recover', 'wellbeing', 'wellness', 'rest', 'breath', 'calm', 'relax', 'resilien', 'burnout', 'anxiety', 'self-care', 'cortisol'],
+    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'drug', 'surgery', 'hospital', 'vaccine', 'artificial intelligence', ' ai ', 'machine learning', 'robot', 'climate', 'election', 'stock'],
   },
 ];
 
@@ -75,8 +88,34 @@ function stripHtml(html: string): string {
     .replace(/&#\d+;/g, '').replace(/\s+/g, ' ').trim();
 }
 
-async function fetchFieldItems(urls: string[]) {
+function passesGate(
+  title: string,
+  desc: string,
+  mustContain: string[],
+  mustNotContain: string[]
+): boolean {
+  const text = (title + ' ' + desc).toLowerCase();
+
+  // Hard block on forbidden terms
+  for (const term of mustNotContain) {
+    if (text.includes(term.toLowerCase())) return false;
+  }
+
+  // Must match at least one relevant keyword
+  for (const term of mustContain) {
+    if (text.includes(term.toLowerCase())) return true;
+  }
+
+  return false;
+}
+
+async function fetchFieldItems(
+  urls: string[],
+  mustContain: string[],
+  mustNotContain: string[]
+) {
   const all: { title: string; desc: string; url: string; pubDate: string }[] = [];
+
   for (const url of urls) {
     try {
       const res = await fetch(url, {
@@ -85,6 +124,7 @@ async function fetchFieldItems(urls: string[]) {
         signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) continue;
+
       const xml = await res.text();
       const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
       const parsed = parser.parse(xml);
@@ -92,25 +132,34 @@ async function fetchFieldItems(urls: string[]) {
       const raw = channel?.item ?? channel?.entry ?? [];
       const items = (Array.isArray(raw) ? raw : [raw]) as Record<string, unknown>[];
 
-      for (const item of items.slice(0, 10)) {
+      for (const item of items.slice(0, 15)) {
         const title = stripHtml(extractText(item.title));
         const desc = stripHtml(extractText(
           item.description ?? item.summary ?? item['content:encoded'] ?? ''
         )).slice(0, 500);
-        if (title.length > 10) {
-          all.push({ title, desc, url: extractUrl(item), pubDate: extractText(item.pubDate ?? item.published ?? '') });
-        }
+
+        if (title.length < 10) continue;
+        if (!passesGate(title, desc, mustContain, mustNotContain)) continue;
+
+        all.push({
+          title,
+          desc,
+          url: extractUrl(item),
+          pubDate: extractText(item.pubDate ?? item.published ?? ''),
+        });
       }
+
       if (all.length >= 15) break;
     } catch { continue; }
   }
 
-  // Deduplicate by title
+  // Deduplicate by title prefix
   const seen = new Set<string>();
   return all.filter(i => {
     const key = i.title.slice(0, 50).toLowerCase();
     if (seen.has(key)) return false;
-    seen.add(key); return true;
+    seen.add(key);
+    return true;
   }).slice(0, 12);
 }
 
@@ -119,7 +168,7 @@ export async function GET() {
     FIELDS.map(async (f) => ({
       field: f.field,
       id: f.id,
-      items: await fetchFieldItems(f.urls),
+      items: await fetchFieldItems(f.urls, f.mustContain, f.mustNotContain),
     }))
   );
 
