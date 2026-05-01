@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-export const maxDuration = 60; // seconds — Vercel hobby allows up to 60
-
 async function callDeepSeek(prompt: string, maxTokens = 800): Promise<string> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
@@ -15,7 +13,7 @@ async function callDeepSeek(prompt: string, maxTokens = 800): Promise<string> {
       max_tokens: maxTokens,
       temperature: 0.4,
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${await res.text()}`);

@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 
-export const maxDuration = 60; // seconds — Vercel hobby allows up to 60
-
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
-async function callDeepSeek(prompt: string, maxTokens = 900): Promise<string> {
+async function callDeepSeek(prompt: string, maxTokens = 400): Promise<string> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
 
@@ -17,7 +15,7 @@ async function callDeepSeek(prompt: string, maxTokens = 900): Promise<string> {
       max_tokens: maxTokens,
       temperature: 0.3,
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!res.ok) {
@@ -93,7 +91,7 @@ ${articleList}
 Respond ONLY in valid JSON with no extra text:
 {"rankings": [1, 2, 3], "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."], "oneWord": "..."}`;
 
-      const text = await callDeepSeek(prompt, 900);
+      const text = await callDeepSeek(prompt, 400);
       const parsed = extractJson(text);
       return NextResponse.json(parsed);
     }
