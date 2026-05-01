@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const maxDuration = 60; // seconds — Vercel hobby allows up to 60
+
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
 async function callDeepSeek(prompt: string, maxTokens = 900): Promise<string> {
@@ -62,7 +64,8 @@ export async function POST(req: Request) {
       }
 
       const articleList = items
-        .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 800)}`)
+        .slice(0, 5)
+        .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 400)}`)
         .join('\n\n');
 
       const prompt = `You are selecting the single most useful psychology article for someone supporting their mental wellbeing.
