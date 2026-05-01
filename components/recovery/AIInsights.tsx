@@ -20,15 +20,6 @@ const STAGE_COLORS: Record<string, { bg: string; text: string; border: string; a
   meaning:       { bg: 'bg-purple-50',  text: 'text-purple-600', border: 'border-purple-200',active: 'bg-purple-500' },
 };
 
-function formatRecordsForAI(records: DailyRecord[]): string {
-  return records.map(r => {
-    const lines = [`Date: ${r.date}`, `Completion: ${r.completion}`, `Energy: ${r.energy}`];
-    const textEntries = Object.entries(r.reflections)
-      .filter(([key, val]) => val && val.length > 3 && !['completion', 'energy', 'effectiveness'].includes(key));
-    textEntries.forEach(([key, val]) => lines.push(`${key}: ${val}`));
-    return lines.join(' | ');
-  }).join('\n');
-}
 
 interface Props {
   state: RecoveryState;
@@ -55,16 +46,9 @@ export default function AIInsights({ state }: Props) {
   const daysInStage = Math.floor((new Date().getTime() - stageStart.getTime()) / 86400000) + 1;
 
   async function generateInsights() {
-    const apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
-    if (!apiKey) {
-      setError('DeepSeek API key not configured.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
-    const recordSummary = formatRecordsForAI(recentRecords);
     const completionCounts = recentRecords.reduce<Record<string, number>>((acc, r) => {
       acc[r.completion] = (acc[r.completion] ?? 0) + 1;
       return acc;
@@ -74,48 +58,28 @@ export default function AIInsights({ state }: Props) {
       return acc;
     }, {});
 
-    const prompt = `You are a gentle, non-judgmental behavioral coach reviewing someone's private personal recovery journal.
-
-Context:
-- Current recovery stage: ${stage.name} — ${stage.tagline}
-- Days in this stage: ${daysInStage}
-- Records analyzed: last ${recentRecords.length} days
-
-Completion breakdown: ${JSON.stringify(completionCounts)}
-Energy breakdown: ${JSON.stringify(energyCounts)}
-
-Their personal reflections (private):
-${recordSummary}
-
-Based only on what you observe above, provide a warm and honest behavioral analysis:
-1. themes: 2-3 recurring emotional or behavioral patterns you genuinely notice (be specific, not generic)
-2. working: what seems to be going well or building momentum, even subtly
-3. challenging: what seems to be most difficult or draining, based on patterns
-4. growth: one specific, honest observation about change or progress — even if small
-5. suggestion: one gentle, concrete suggestion for the next 7 days — something small and actionable
-
-Important: Be specific to their actual reflections. Avoid clinical language. Do not diagnose. Keep tone warm and human.
-
-Respond ONLY in valid JSON with no markdown:
-{"themes": ["...", "..."], "working": "...", "challenging": "...", "growth": "...", "suggestion": "..."}`;
-
     try {
-      const res = await fetch('https://api.deepseek.com/chat/completions', {
+      const res = await fetch('/api/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 600,
-          temperature: 0.4,
+          type: 'insights',
+          stageName: stage.name,
+          stageTagline: stage.tagline,
+          daysInStage,
+          records: recentRecords,
+          completionCounts,
+          energyCounts,
         }),
       });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      const text = (data.choices?.[0]?.message?.content ?? '').trim().replace(/```json\n?|\n?```/g, '');
-      const parsed: Insight = JSON.parse(text);
-      setInsight(parsed);
-      setLastGenerated(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+      if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+      const parsed: Insight = await res.json();
+      if (parsed.themes) {
+        setInsight(parsed);
+        setLastGenerated(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+      } else {
+        throw new Error('Unexpected response format');
+      }
     } catch (e) {
       setError('Could not generate insights right now. Try again in a moment.');
       console.error('AIInsights error:', e);

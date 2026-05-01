@@ -6,13 +6,6 @@ import FindingCard, { Finding } from './FindingCard';
 interface RawItem { title: string; desc: string; url: string; pubDate: string; }
 interface FieldData { field: string; id: string; items: RawItem[]; }
 
-const FIELD_DESCRIPTIONS: Record<string, string> = {
-  'Behavioral': 'behavioral psychology, habits, emotions, cognitive patterns, motivation, decision-making, coping, mental health',
-  'I/O & Work': 'workplace psychology, organizational behavior, leadership, team dynamics, employee wellbeing, job performance, burnout at work, productivity',
-  'Group & Social': 'social psychology, group dynamics, conformity, peer influence, belonging, relationships, social identity, community',
-  'Stress & Recovery': 'stress management, recovery, mindfulness, sleep, rest, resilience, emotional regulation, relaxation, self-care',
-};
-
 function toSource(url: string) {
   try { return new URL(url).hostname.replace('www.', ''); } catch { return 'Research'; }
 }
@@ -24,65 +17,28 @@ function toPubDate(raw: string) {
 async function deepseekSelect(
   field: string,
   items: RawItem[],
-  apiKey: string
 ): Promise<Finding | null> {
-  if (!apiKey || items.length === 0) return null;
-
-  const articleList = items
-    .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 300)}`)
-    .join('\n\n');
-
-  const prompt = `You are curating daily psychology content for someone building self-awareness and understanding of human behavior.
-
-Field: ${field}
-What belongs here: ${FIELD_DESCRIPTIONS[field] ?? field}
-
-From the articles below, rank the TOP 3 most relevant to this exact field. Reject anything off-topic (medical conditions, AI technology, politics, climate, general science).
-
-For the #1 ranked article, write a structured summary with these four sections:
-- finding: The core research finding, stated precisely (2 sentences)
-- context: The background or setting that makes this significant (1-2 sentences)
-- population: Who this was studied on or who it affects (1 sentence)
-- implication: What this means for everyday life and one concrete action to take (2 sentences)
-
-Also choose ONE powerful word (noun or verb) that captures the essence.
-
-Articles:
-${articleList}
-
-Respond ONLY in valid JSON with no markdown:
-{"rankings": [1, 2, 3], "finding": "...", "context": "...", "population": "...", "implication": "...", "oneWord": "..."}`;
+  if (items.length === 0) return null;
 
   try {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
+    const res = await fetch('/api/summarize', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 700,
-        temperature: 0.3,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'findings', field, items }),
     });
 
     if (!res.ok) {
-      console.error(`DeepSeek error for ${field}: ${res.status}`);
+      console.error(`Summarize API error for ${field}: ${res.status}`, await res.text());
       return null;
     }
 
-    const data = await res.json();
-    const text = (data.choices?.[0]?.message?.content ?? '').trim();
-    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = await res.json();
+    if (parsed.error) { console.error('Summarize error:', parsed.error); return null; }
 
     const rankings: number[] = Array.isArray(parsed.rankings) ? parsed.rankings : [1];
     const topIdx = Math.max(0, (rankings[0] ?? 1) - 1);
     const picked = items[topIdx] ?? items[0];
 
-    // Build alternates from 2nd and 3rd ranked articles
     const alternates = rankings.slice(1, 3).map(rank => {
       const item = items[Math.max(0, rank - 1)];
       if (!item) return null;
@@ -154,8 +110,6 @@ export default function DailyFindings() {
       } catch { localStorage.removeItem(cacheKey); }
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
-
     setStatus('Fetching latest psychology research...');
     fetch('/api/findings')
       .then(r => r.json())
@@ -170,8 +124,8 @@ export default function DailyFindings() {
 
           let finding: Finding | null = null;
 
-          if (apiKey && items.length > 0) {
-            finding = await deepseekSelect(field, items, apiKey);
+          if (items.length > 0) {
+            finding = await deepseekSelect(field, items);
           }
 
           if (!finding) {
