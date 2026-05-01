@@ -3,50 +3,193 @@
 import { useEffect, useState } from 'react';
 import FindingCard, { Finding } from './FindingCard';
 
+interface RawItem { title: string; desc: string; url: string; pubDate: string; }
+interface FieldData { field: string; id: string; items: RawItem[]; }
+
+const FIELD_DESCRIPTIONS: Record<string, string> = {
+  'Behavioral': 'behavioral psychology, habits, emotions, cognitive patterns, motivation, decision-making, coping, mental health',
+  'I/O & Work': 'workplace psychology, organizational behavior, leadership, team dynamics, employee wellbeing, job performance, burnout at work, productivity',
+  'Group & Social': 'social psychology, group dynamics, conformity, peer influence, belonging, relationships, social identity, community',
+  'Stress & Recovery': 'stress management, recovery, mindfulness, sleep, rest, resilience, emotional regulation, relaxation, self-care',
+};
+
+async function deepseekSelect(
+  field: string,
+  items: RawItem[],
+  apiKey: string
+): Promise<Finding | null> {
+  if (!apiKey || items.length === 0) return null;
+
+  const articleList = items
+    .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 300)}`)
+    .join('\n\n');
+
+  const prompt = `You are curating daily psychology content for someone who wants to build self-awareness, reduce stress, and understand human behavior better.
+
+Field: ${field}
+What belongs here: ${FIELD_DESCRIPTIONS[field] ?? field}
+
+From the articles below, select the ONE most relevant and insightful article that genuinely belongs to this field. Reject anything off-topic, even slightly.
+
+Then write a warm, complete 5-sentence summary that:
+1. States the core finding clearly
+2. Explains WHY this matters to everyday life
+3. Gives one concrete example of how it shows up in real life
+4. Connects it to self-awareness or emotional wellbeing
+5. Ends with one small, practical takeaway
+
+Also choose ONE powerful word (a noun or verb) that captures the essence of this finding.
+
+Articles:
+${articleList}
+
+Respond ONLY in valid JSON with no markdown:
+{"index": 1, "summary": "...", "oneWord": "..."}`;
+
+  try {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 400,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error(`DeepSeek error for ${field}: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const text = (data.choices?.[0]?.message?.content ?? '').trim();
+
+    // Strip any markdown code blocks
+    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    const idx = (parsed.index ?? 1) - 1;
+    const picked = items[idx] ?? items[0];
+
+    const source = (() => {
+      try { return new URL(picked.url).hostname.replace('www.', ''); }
+      catch { return 'Research'; }
+    })();
+
+    const pubDate = picked.pubDate ? (() => {
+      try { return new Date(picked.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+      catch { return ''; }
+    })() : '';
+
+    return {
+      field,
+      title: picked.title,
+      summary: parsed.summary ?? picked.desc,
+      source,
+      url: picked.url,
+      oneWord: parsed.oneWord ?? 'Insight',
+      pubDate,
+    };
+  } catch (e) {
+    console.error(`DeepSeek parse error for ${field}:`, e);
+    return null;
+  }
+}
+
+function localFallback(field: string, items: RawItem[]): Finding {
+  const item = items[0] ?? { title: 'No article found', desc: '', url: '', pubDate: '' };
+  const source = (() => { try { return new URL(item.url).hostname.replace('www.', ''); } catch { return 'Research'; } })();
+  return {
+    field,
+    title: item.title,
+    summary: item.desc || 'Tap "Full article" to read more.',
+    source,
+    url: item.url,
+    oneWord: item.title.split(' ').find(w => w.length > 5) ?? 'Insight',
+    pubDate: '',
+  };
+}
+
+const HARDCODED_FALLBACKS: Finding[] = [
+  { field: 'Behavioral', title: 'Habits form through context cues, not willpower', summary: 'Research shows that environment design is more powerful than motivation for building lasting habits. The brain links behaviors to contexts — the same cue in the same setting will reliably trigger the same response. This means the most effective habit change comes from redesigning your surroundings, not trying harder. When we move homes or change jobs, habits often break because the context changes. One practical step: place what you want to do where you will naturally see it.', source: 'bpsresearchdigest.com', url: 'https://bpsresearchdigest.com', oneWord: 'Habit', pubDate: '' },
+  { field: 'I/O & Work', title: 'Psychological safety predicts team innovation and learning', summary: 'Teams where people feel safe to speak up without fear of judgment consistently outperform those where they do not. Psychological safety is not about being nice — it creates conditions where honest input is welcomed and mistakes become learning opportunities. Leaders who respond to failure with curiosity rather than blame build cultures that improve over time. Research from Google found that safety was the single strongest predictor of team effectiveness. The simplest change: respond to bad news with questions, not judgment.', source: 'hbr.org', url: 'https://hbr.org', oneWord: 'Safety', pubDate: '' },
+  { field: 'Group & Social', title: 'Social rejection activates the same brain regions as physical pain', summary: 'Being excluded or rejected by others triggers neural pathways that overlap significantly with those activated by physical pain. This is not a metaphor — social pain is real pain processed in a similar way by the brain. This evolutionary response made sense when belonging to a group was essential for survival. Today it means that loneliness or feeling left out genuinely hurts in a biological sense. Understanding this can help us extend more compassion to ourselves when social situations feel overwhelming.', source: 'sciencedaily.com', url: 'https://sciencedaily.com', oneWord: 'Belonging', pubDate: '' },
+  { field: 'Stress & Recovery', title: 'Deliberate rest reduces cortisol more effectively than passive distraction', summary: 'Studies show that intentional rest — doing nothing with purpose — lowers cortisol levels more reliably than distracting yourself with screens or entertainment. The brain needs genuine downtime to consolidate experiences and restore cognitive resources. Distraction delays recovery; stillness accelerates it. Even 10 minutes of sitting quietly, without agenda, produces measurable physiological change. Rest is not a reward for finishing work — it is part of how the brain and body actually recover.', source: 'greatergood.berkeley.edu', url: 'https://greatergood.berkeley.edu', oneWord: 'Rest', pubDate: '' },
+];
+
 export default function DailyFindings() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [status, setStatus] = useState<string>('Loading today\'s findings...');
 
   useEffect(() => {
-    const cacheKey = `findings_${new Date().toISOString().split('T')[0]}`;
-    const cached = sessionStorage.getItem(cacheKey);
+    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `findings_v2_${today}`;
+    const cached = localStorage.getItem(cacheKey);
+
     if (cached) {
-      setFindings(JSON.parse(cached));
-      setLoading(false);
-      return;
+      try {
+        setFindings(JSON.parse(cached));
+        setLoading(false);
+        return;
+      } catch { localStorage.removeItem(cacheKey); }
     }
 
+    const apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
+
+    setStatus('Fetching latest psychology research...');
     fetch('/api/findings')
-      .then((r) => r.json())
-      .then((data) => {
-        setFindings(data);
-        sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      .then(r => r.json())
+      .then(async (fields: FieldData[]) => {
+        setStatus('Selecting best articles with AI...');
+
+        const results: Finding[] = [];
+
+        for (let i = 0; i < fields.length; i++) {
+          const { field, items } = fields[i];
+          setStatus(`Reading ${field} findings (${i + 1}/4)...`);
+
+          let finding: Finding | null = null;
+
+          if (apiKey && items.length > 0) {
+            finding = await deepseekSelect(field, items, apiKey);
+          }
+
+          if (!finding) {
+            finding = items.length > 0
+              ? localFallback(field, items)
+              : HARDCODED_FALLBACKS[i];
+          }
+
+          results.push(finding);
+        }
+
+        localStorage.setItem(cacheKey, JSON.stringify(results));
+        setFindings(results);
+        setLoading(false);
       })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        setFindings(HARDCODED_FALLBACKS);
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-3xl p-5 shadow-card animate-pulse">
-            <div className="h-4 bg-warm-100 rounded w-20 mb-4" />
-            <div className="h-8 bg-warm-100 rounded w-24 mb-2" />
-            <div className="h-4 bg-warm-100 rounded w-full mb-1" />
-            <div className="h-4 bg-warm-100 rounded w-3/4" />
-          </div>
+        <div className="bg-white rounded-3xl p-6 shadow-card border border-warm-100 text-center">
+          <div className="w-6 h-6 rounded-full border-2 border-sage border-t-transparent animate-spin mx-auto mb-3" />
+          <p className="text-warm-500 text-sm">{status}</p>
+          <p className="text-warm-300 text-xs mt-1">DeepSeek is selecting the best articles for you</p>
+        </div>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-white rounded-3xl p-5 shadow-card animate-pulse h-32 border border-warm-100" />
         ))}
-      </div>
-    );
-  }
-
-  if (error || findings.length === 0) {
-    return (
-      <div className="bg-white rounded-3xl p-6 shadow-card text-center">
-        <p className="text-warm-500 text-sm">Couldn't load today's findings.</p>
-        <p className="text-warm-400 text-xs mt-1">Check your connection and try again.</p>
       </div>
     );
   }
