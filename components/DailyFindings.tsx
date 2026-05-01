@@ -35,10 +35,18 @@ async function selectBestArticle(cat: CategoryData): Promise<Finding | null> {
         items: cat.items,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const err = await res.text().catch(() => res.status.toString());
+      console.error(`[DailyFindings] summarize API error for ${cat.categoryId}:`, err);
+      return null;
+    }
 
     const parsed = await res.json();
-    if (parsed.error) return null;
+    console.log(`[DailyFindings] ${cat.categoryId} response:`, parsed);
+    if (parsed.error) {
+      console.error(`[DailyFindings] summarize returned error for ${cat.categoryId}:`, parsed.error);
+      return null;
+    }
 
     const rankings: number[] = Array.isArray(parsed.rankings) ? parsed.rankings : [1];
     const topIdx = Math.max(0, (rankings[0] ?? 1) - 1);
@@ -67,7 +75,10 @@ async function selectBestArticle(cat: CategoryData): Promise<Finding | null> {
       pubDate: toPubDate(picked.pubDate),
       alternates,
     };
-  } catch { return null; }
+  } catch (e) {
+    console.error(`[DailyFindings] selectBestArticle failed for ${cat.categoryId}:`, e);
+    return null;
+  }
 }
 
 function fallback(cat: CategoryData): Finding {
@@ -176,11 +187,11 @@ export default function DailyFindings({ categories = [], reasonMap = {} }: Props
   useEffect(() => {
     if (categories.length === 0) return; // wait for check-in
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v7_${today}_${[...categories].sort().join(',')}`;
+    const cacheKey = `findings_v8_${today}_${[...categories].sort().join(',')}`;
 
     // Clean up all older cache versions
     Object.keys(localStorage).forEach(k => {
-      if (/^findings_v[2-6]_/.test(k)) localStorage.removeItem(k);
+      if (/^findings_v[2-7]_/.test(k)) localStorage.removeItem(k);
     });
 
     const cached = localStorage.getItem(cacheKey);
