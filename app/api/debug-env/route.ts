@@ -25,9 +25,13 @@ export async function GET() {
 
       if (res.ok) {
         const data = await res.json();
-        const content = data.choices?.[0]?.message?.content ?? '';
+        const choice = data.choices?.[0];
+        const content = choice?.message?.content ?? '';
+        const reasoning = choice?.message?.reasoning_content ?? '';
         result.deepseek_test = 'PASS';
         result.deepseek_response = content;
+        result.deepseek_reasoning = reasoning ? reasoning.slice(0, 100) : '(none)';
+        result.deepseek_raw_message = choice?.message ?? '(no choice)';
       } else {
         const err = await res.text();
         result.deepseek_test = `FAIL (${res.status})`;
