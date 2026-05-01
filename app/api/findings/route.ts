@@ -2,10 +2,28 @@ import { NextResponse } from 'next/server';
 import { XMLParser } from 'fast-xml-parser';
 import { CATEGORIES, getCategoryById, type CategoryId } from '@/lib/articleCategories';
 
-// Default categories when no check-in is available
 const DEFAULT_CATEGORIES: CategoryId[] = ['behavioral_activation', 'stress_recovery', 'meaning_identity'];
 
-// ── XML / RSS helpers ──────────────────────────────────────────────────────
+// Google News RSS search query per category — fresh results every day
+const GOOGLE_NEWS_QUERIES: Record<CategoryId, string> = {
+  behavioral_activation:   'psychology habits motivation behavioral activation small steps',
+  stress_recovery:         'stress recovery cortisol nervous system mindfulness psychology research',
+  social_anxiety:          'social anxiety psychology fear judgment research study',
+  shame_embarrassment:     'shame embarrassment psychology self-compassion research',
+  self_worth:              'self-esteem self-compassion self-worth psychology research',
+  meaning_identity:        'meaning purpose identity psychology wellbeing research',
+  autonomy_uncertainty:    'autonomy uncertainty control psychology decision making research',
+  relationship_belonging:  'belonging loneliness connection social support psychology research',
+  burnout_recovery:        'burnout recovery exhaustion workplace psychology research',
+  emotional_regulation:    'emotional regulation coping psychology research study',
+};
+
+function googleNewsUrl(query: string): string {
+  const q = encodeURIComponent(query);
+  return `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+// ── XML / RSS helpers ────────────────────────────────────────────────────────
 
 function extractText(val: unknown): string {
   if (typeof val === 'string') return val;
@@ -37,12 +55,7 @@ function stripHtml(html: string): string {
     .replace(/&#\d+;/g, '').replace(/\s+/g, ' ').trim();
 }
 
-function passesGate(
-  title: string,
-  desc: string,
-  mustContain: string[],
-  mustNotContain: string[]
-): boolean {
+function passesGate(title: string, desc: string, mustContain: string[], mustNotContain: string[]): boolean {
   const text = (title + ' ' + desc).toLowerCase();
   for (const term of mustNotContain) {
     if (text.includes(term.toLowerCase())) return false;
@@ -53,47 +66,62 @@ function passesGate(
   return false;
 }
 
-async function fetchCategoryItems(categoryId: CategoryId) {
+type RawItem = { title: string; desc: string; url: string; pubDate: string };
+
+async function fetchRss(url: string): Promise<Record<string, unknown>[]> {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'PsychHub/1.0 (personal wellbeing app)' },
+    next: { revalidate: 3600 },
+    signal: AbortSignal.timeout(6000),
+  });
+  if (!res.ok) return [];
+  const xml = await res.text();
+  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+  const parsed = parser.parse(xml);
+  const channel = parsed?.rss?.channel ?? parsed?.feed;
+  const raw = channel?.item ?? channel?.entry ?? [];
+  return (Array.isArray(raw) ? raw : [raw]) as Record<string, unknown>[];
+}
+
+async function fetchCategoryItems(categoryId: CategoryId): Promise<RawItem[]> {
   const category = getCategoryById(categoryId);
-  const all: { title: string; desc: string; url: string; pubDate: string }[] = [];
+  const all: RawItem[] = [];
 
-  for (const rssUrl of category.sources) {
-    try {
-      const res = await fetch(rssUrl, {
-        headers: { 'User-Agent': 'PsychHub/1.0 (personal wellbeing app)' },
-        next: { revalidate: 3600 },
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) continue;
+  // ── Primary: Google News (fresh daily results) ───────────────────────────
+  try {
+    const gnUrl = googleNewsUrl(GOOGLE_NEWS_QUERIES[categoryId]);
+    const items = await fetchRss(gnUrl);
 
-      const xml = await res.text();
-      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
-      const parsed = parser.parse(xml);
-      const channel = parsed?.rss?.channel ?? parsed?.feed;
-      const raw = channel?.item ?? channel?.entry ?? [];
-      const items = (Array.isArray(raw) ? raw : [raw]) as Record<string, unknown>[];
+    for (const item of items.slice(0, 25)) {
+      const title = stripHtml(extractText(item.title));
+      const desc  = stripHtml(extractText(item.description ?? item.summary ?? '')).slice(0, 1500);
 
-      for (const item of items.slice(0, 20)) {
-        const title = stripHtml(extractText(item.title));
-        const desc = stripHtml(extractText(
-          item.description ?? item.summary ?? item['content:encoded'] ?? ''
-        )).slice(0, 2000);
+      if (title.length < 15) continue;
+      if (!passesGate(title, desc, category.mustContain, category.mustNotContain)) continue;
 
-        if (title.length < 10) continue;
-        if (!passesGate(title, desc, category.mustContain, category.mustNotContain)) continue;
+      all.push({ title, desc, url: extractUrl(item), pubDate: extractText(item.pubDate ?? item.published ?? '') });
+      if (all.length >= 12) break;
+    }
+  } catch { /* fall through to fixed sources */ }
 
-        all.push({
-          title,
-          desc,
-          url: extractUrl(item),
-          pubDate: extractText(item.pubDate ?? item.published ?? ''),
-        });
+  // ── Fallback: fixed RSS feeds if Google News gave too few results ─────────
+  if (all.length < 5) {
+    for (const rssUrl of category.sources) {
+      try {
+        const items = await fetchRss(rssUrl);
+        for (const item of items.slice(0, 20)) {
+          const title = stripHtml(extractText(item.title));
+          const desc  = stripHtml(extractText(item.description ?? item.summary ?? item['content:encoded'] ?? '')).slice(0, 1500);
 
-        if (all.length >= 20) break;
-      }
+          if (title.length < 10) continue;
+          if (!passesGate(title, desc, category.mustContain, category.mustNotContain)) continue;
 
-      if (all.length >= 15) break; // enough — stop fetching more sources
-    } catch { continue; }
+          all.push({ title, desc, url: extractUrl(item), pubDate: extractText(item.pubDate ?? item.published ?? '') });
+          if (all.length >= 15) break;
+        }
+        if (all.length >= 15) break;
+      } catch { continue; }
+    }
   }
 
   // Deduplicate by title prefix
@@ -107,7 +135,6 @@ async function fetchCategoryItems(categoryId: CategoryId) {
 }
 
 // GET /api/findings?categories=stress_recovery,behavioral_activation
-// Returns: [{ categoryId, categoryLabel, items[] }]
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const param = searchParams.get('categories');
@@ -118,9 +145,9 @@ export async function GET(req: Request) {
 
   const categoryIds = requestedIds.length > 0 ? requestedIds : DEFAULT_CATEGORIES;
 
-  // Deduplicate articles across categories — once a URL is used, exclude it from later categories
+  // Deduplicate articles across categories
   const usedUrls = new Set<string>();
-  const results: { categoryId: CategoryId; categoryLabel: string; categoryDescription: string; items: { title: string; desc: string; url: string; pubDate: string }[] }[] = [];
+  const results = [];
 
   for (const id of categoryIds) {
     const category = getCategoryById(id);
