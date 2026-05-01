@@ -1,62 +1,11 @@
 import { NextResponse } from 'next/server';
 import { XMLParser } from 'fast-xml-parser';
+import { CATEGORIES, getCategoryById, type CategoryId } from '@/lib/articleCategories';
 
-// Each field has dedicated, non-overlapping RSS sources + keyword gates
-// to block obviously off-topic articles before DeepSeek sees them.
+// Default categories when no check-in is available
+const DEFAULT_CATEGORIES: CategoryId[] = ['behavioral_activation', 'stress_recovery', 'meaning_identity'];
 
-const FIELDS = [
-  {
-    id: 'behavioral',
-    field: 'Behavioral',
-    // Sources: dedicated behavioral/cognitive science outlets
-    urls: [
-      'https://behavioralscientist.org/feed/',
-      'https://bpsresearchdigest.com/feed/',
-      'https://digest.bps.org.uk/feed/',
-    ],
-    // Must contain at least one of these in title/desc
-    mustContain: ['habit', 'behav', 'cognit', 'decision', 'emotion', 'motivat', 'bias', 'mental', 'mind', 'psycholog', 'pattern', 'think', 'self'],
-    // Reject if title contains any of these
-    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'disease', 'drug', 'surgery', 'vaccine', 'hospital', 'artificial intelligence', ' ai ', 'chatgpt', 'robot', 'machine learning', 'climate', 'election', 'stock'],
-  },
-  {
-    id: 'io_work',
-    field: 'I/O & Work',
-    // Sources: dedicated workplace/organizational psychology outlets
-    urls: [
-      'https://www.ioatwork.com/feed/',
-      'https://workdesignmagazine.com/feed/',
-      'https://sloanreview.mit.edu/feed/',
-      'https://hbr.org/feed',
-    ],
-    mustContain: ['team', 'leader', 'workplace', 'employ', 'organiz', 'manage', 'work', 'job', 'burnout', 'collabor', 'productiv', 'perform', 'culture', 'engag'],
-    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'vaccine', 'surgery', 'hospital', 'drug', 'artificial intelligence', ' ai model', 'chatgpt', 'climate', 'election', 'stock market'],
-  },
-  {
-    id: 'group_social',
-    field: 'Group & Social',
-    // Sources: specifically social psychology RSS — NOT shared with behavioral
-    urls: [
-      'https://www.sciencedaily.com/rss/mind_brain/social_psychology.xml',
-      'https://greatergood.berkeley.edu/feeds/news',
-      'https://psycnet.apa.org/rss/journal/gd0',
-    ],
-    mustContain: ['social', 'group', 'community', 'relationship', 'belonging', 'conform', 'peer', 'connect', 'loneli', 'friend', 'trust', 'identity', 'norms', 'influenc', 'cooperat'],
-    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'vaccine', 'drug', 'surgery', 'hospital', 'artificial intelligence', 'machine learning', 'robot', 'climate change', 'election', 'stock'],
-  },
-  {
-    id: 'stress_release',
-    field: 'Stress & Recovery',
-    // Sources: mindfulness/wellbeing specific — NOT sciencedaily general
-    urls: [
-      'https://www.mindful.org/feed/',
-      'https://www.sciencedaily.com/rss/mind_brain/stress.xml',
-      'https://www.apa.org/rss/news.xml',
-    ],
-    mustContain: ['stress', 'sleep', 'mindful', 'meditat', 'recover', 'wellbeing', 'wellness', 'rest', 'breath', 'calm', 'relax', 'resilien', 'burnout', 'anxiety', 'self-care', 'cortisol'],
-    mustNotContain: ['alzheimer', 'cancer', 'tumor', 'drug', 'surgery', 'hospital', 'vaccine', 'artificial intelligence', ' ai ', 'machine learning', 'robot', 'climate', 'election', 'stock'],
-  },
-];
+// ── XML / RSS helpers ──────────────────────────────────────────────────────
 
 function extractText(val: unknown): string {
   if (typeof val === 'string') return val;
@@ -95,31 +44,23 @@ function passesGate(
   mustNotContain: string[]
 ): boolean {
   const text = (title + ' ' + desc).toLowerCase();
-
-  // Hard block on forbidden terms
   for (const term of mustNotContain) {
     if (text.includes(term.toLowerCase())) return false;
   }
-
-  // Must match at least one relevant keyword
   for (const term of mustContain) {
     if (text.includes(term.toLowerCase())) return true;
   }
-
   return false;
 }
 
-async function fetchFieldItems(
-  urls: string[],
-  mustContain: string[],
-  mustNotContain: string[]
-) {
+async function fetchCategoryItems(categoryId: CategoryId) {
+  const category = getCategoryById(categoryId);
   const all: { title: string; desc: string; url: string; pubDate: string }[] = [];
 
-  for (const url of urls) {
+  for (const rssUrl of category.sources) {
     try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'PsychHub/1.0' },
+      const res = await fetch(rssUrl, {
+        headers: { 'User-Agent': 'PsychHub/1.0 (personal wellbeing app)' },
         next: { revalidate: 3600 },
         signal: AbortSignal.timeout(5000),
       });
@@ -132,14 +73,14 @@ async function fetchFieldItems(
       const raw = channel?.item ?? channel?.entry ?? [];
       const items = (Array.isArray(raw) ? raw : [raw]) as Record<string, unknown>[];
 
-      for (const item of items.slice(0, 15)) {
+      for (const item of items.slice(0, 20)) {
         const title = stripHtml(extractText(item.title));
         const desc = stripHtml(extractText(
           item.description ?? item.summary ?? item['content:encoded'] ?? ''
         )).slice(0, 2000);
 
         if (title.length < 10) continue;
-        if (!passesGate(title, desc, mustContain, mustNotContain)) continue;
+        if (!passesGate(title, desc, category.mustContain, category.mustNotContain)) continue;
 
         all.push({
           title,
@@ -147,9 +88,11 @@ async function fetchFieldItems(
           url: extractUrl(item),
           pubDate: extractText(item.pubDate ?? item.published ?? ''),
         });
+
+        if (all.length >= 20) break;
       }
 
-      if (all.length >= 15) break;
+      if (all.length >= 15) break; // enough — stop fetching more sources
     } catch { continue; }
   }
 
@@ -163,13 +106,28 @@ async function fetchFieldItems(
   }).slice(0, 12);
 }
 
-export async function GET() {
+// GET /api/findings?categories=stress_recovery,behavioral_activation
+// Returns: [{ categoryId, categoryLabel, items[] }]
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const param = searchParams.get('categories');
+
+  const requestedIds: CategoryId[] = param
+    ? (param.split(',').filter(id => CATEGORIES.some(c => c.id === id)) as CategoryId[])
+    : DEFAULT_CATEGORIES;
+
+  const categoryIds = requestedIds.length > 0 ? requestedIds : DEFAULT_CATEGORIES;
+
   const results = await Promise.all(
-    FIELDS.map(async (f) => ({
-      field: f.field,
-      id: f.id,
-      items: await fetchFieldItems(f.urls, f.mustContain, f.mustNotContain),
-    }))
+    categoryIds.map(async (id) => {
+      const category = getCategoryById(id);
+      return {
+        categoryId: id,
+        categoryLabel: category.label,
+        categoryDescription: category.description,
+        items: await fetchCategoryItems(id),
+      };
+    })
   );
 
   return NextResponse.json(results, {

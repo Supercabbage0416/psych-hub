@@ -3,43 +3,67 @@
 import { useState } from 'react';
 import ReflectWithAI from './ReflectWithAI';
 import { saveHubItem } from '@/lib/supabase';
+import type { CategoryId } from '@/lib/articleCategories';
 
 export interface Finding {
   title: string;
-  summary: string;
-  finding?: string;
-  context?: string;
-  population?: string;
-  implication?: string;
+  headline?: string;           // one-sentence summary shown on card
+  bullets?: string[];          // 4 structured bullets from AI
+  summary: string;             // legacy / fallback prose
+  finding?: string;            // legacy
+  context?: string;            // legacy
+  population?: string;         // legacy
+  implication?: string;        // legacy
   source: string;
   url: string;
-  field: string;
+  field: string;               // human label e.g. "Stress & Recovery"
+  categoryId?: CategoryId;     // machine ID e.g. "stress_recovery"
   oneWord: string;
   pubDate?: string;
   alternates?: { title: string; url: string; source: string; pubDate: string; desc: string }[];
 }
 
-const fieldStyles: Record<string, { badge: string; accent: string; dot: string }> = {
-  'Behavioral':        { badge: 'bg-sage-pale text-sage',      accent: 'border-sage-light', dot: 'bg-sage' },
-  'I/O & Work':        { badge: 'bg-rose-pale text-rose',      accent: 'border-rose-light', dot: 'bg-rose' },
-  'Group & Social':    { badge: 'bg-amber-50 text-amber-700',  accent: 'border-amber-200',  dot: 'bg-amber-400' },
-  'Stress & Recovery': { badge: 'bg-blue-50 text-blue-600',    accent: 'border-blue-200',   dot: 'bg-blue-400' },
+// Category → visual style
+const CATEGORY_STYLES: Record<string, { badge: string; border: string; dot: string; bg: string }> = {
+  behavioral_activation: { badge: 'bg-sage-pale text-sage',      border: 'border-sage-light',  dot: 'bg-sage',      bg: 'bg-sage-pale' },
+  stress_recovery:       { badge: 'bg-blue-50 text-blue-600',    border: 'border-blue-200',    dot: 'bg-blue-400',  bg: 'bg-blue-50' },
+  social_anxiety:        { badge: 'bg-amber-50 text-amber-700',  border: 'border-amber-200',   dot: 'bg-amber-400', bg: 'bg-amber-50' },
+  shame_embarrassment:   { badge: 'bg-rose-pale text-rose',      border: 'border-rose-light',  dot: 'bg-rose',      bg: 'bg-rose-pale' },
+  self_worth:            { badge: 'bg-purple-50 text-purple-600',border: 'border-purple-200',  dot: 'bg-purple-400',bg: 'bg-purple-50' },
+  meaning_identity:      { badge: 'bg-amber-50 text-amber-700',  border: 'border-amber-200',   dot: 'bg-amber-500', bg: 'bg-amber-50' },
+  autonomy_uncertainty:  { badge: 'bg-sage-pale text-sage',      border: 'border-sage-light',  dot: 'bg-sage',      bg: 'bg-sage-pale' },
+  relationship_belonging:{ badge: 'bg-rose-pale text-rose',      border: 'border-rose-light',  dot: 'bg-rose',      bg: 'bg-rose-pale' },
+  burnout_recovery:      { badge: 'bg-blue-50 text-blue-600',    border: 'border-blue-200',    dot: 'bg-blue-400',  bg: 'bg-blue-50' },
+  emotional_regulation:  { badge: 'bg-purple-50 text-purple-600',border: 'border-purple-200',  dot: 'bg-purple-400',bg: 'bg-purple-50' },
+  // Legacy field names
+  'Behavioral':          { badge: 'bg-sage-pale text-sage',      border: 'border-sage-light',  dot: 'bg-sage',      bg: 'bg-sage-pale' },
+  'I/O & Work':          { badge: 'bg-rose-pale text-rose',      border: 'border-rose-light',  dot: 'bg-rose',      bg: 'bg-rose-pale' },
+  'Group & Social':      { badge: 'bg-amber-50 text-amber-700',  border: 'border-amber-200',   dot: 'bg-amber-400', bg: 'bg-amber-50' },
+  'Stress & Recovery':   { badge: 'bg-blue-50 text-blue-600',    border: 'border-blue-200',    dot: 'bg-blue-400',  bg: 'bg-blue-50' },
 };
-const fallbackStyle = { badge: 'bg-warm-100 text-warm-500', accent: 'border-warm-200', dot: 'bg-warm-300' };
+const FALLBACK_STYLE = { badge: 'bg-warm-100 text-warm-500', border: 'border-warm-200', dot: 'bg-warm-300', bg: 'bg-warm-50' };
 
-const SECTIONS = [
-  { key: 'finding' as const,    label: 'Finding' },
-  { key: 'context' as const,    label: 'Context' },
-  { key: 'population' as const, label: 'Population' },
-  { key: 'implication' as const,label: 'Implication' },
-];
+function getStyle(finding: Finding) {
+  return CATEGORY_STYLES[finding.categoryId ?? '']
+    ?? CATEGORY_STYLES[finding.field]
+    ?? FALLBACK_STYLE;
+}
+
+// Parse "Label: content" bullet format
+function parseBullet(bullet: string): { label: string; text: string } {
+  const colonIdx = bullet.indexOf(':');
+  if (colonIdx === -1) return { label: '', text: bullet };
+  return { label: bullet.slice(0, colonIdx).trim(), text: bullet.slice(colonIdx + 1).trim() };
+}
+
+const BULLET_ICONS = ['🔬', '💡', '🎯', '✦'];
 
 type HubCollection = 'explains_me' | 'helps_recover' | 'meaningful' | 'revisit';
 const HUB_COLLECTIONS: { id: HubCollection; label: string; icon: string }[] = [
-  { id: 'explains_me', label: 'Explains me', icon: '🪞' },
-  { id: 'helps_recover', label: 'Helps me recover', icon: '🌱' },
-  { id: 'meaningful', label: 'Still meaningful', icon: '✨' },
-  { id: 'revisit', label: 'Want to revisit', icon: '🔖' },
+  { id: 'explains_me',   label: 'Explains me',       icon: '🪞' },
+  { id: 'helps_recover', label: 'Helps me recover',  icon: '🌱' },
+  { id: 'meaningful',    label: 'Still meaningful',  icon: '✨' },
+  { id: 'revisit',       label: 'Want to revisit',   icon: '🔖' },
 ];
 
 export default function FindingCard({ finding }: { finding: Finding }) {
@@ -49,33 +73,31 @@ export default function FindingCard({ finding }: { finding: Finding }) {
   const [hubCollection, setHubCollection] = useState<HubCollection | null>(null);
   const [hubReason, setHubReason] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
-  const style = fieldStyles[finding.field] ?? fallbackStyle;
 
+  const style = getStyle(finding);
+  const hasBullets = (finding.bullets?.length ?? 0) > 0;
+  const displayHeadline = finding.headline ?? finding.title;
   const totalArticles = 1 + (finding.alternates?.length ?? 0);
   const hasAlternates = totalArticles > 1;
 
-  const currentTitle   = activeIdx === 0 ? finding.title   : finding.alternates![activeIdx - 1].title;
-  const currentUrl     = activeIdx === 0 ? finding.url     : finding.alternates![activeIdx - 1].url;
-  const currentSource  = activeIdx === 0 ? finding.source  : finding.alternates![activeIdx - 1].source;
-  const currentPubDate = activeIdx === 0 ? finding.pubDate : finding.alternates![activeIdx - 1].pubDate;
+  const currentTitle  = activeIdx === 0 ? finding.title  : finding.alternates![activeIdx - 1].title;
+  const currentUrl    = activeIdx === 0 ? finding.url    : finding.alternates![activeIdx - 1].url;
+  const currentSource = activeIdx === 0 ? finding.source : finding.alternates![activeIdx - 1].source;
+  const currentPubDate= activeIdx === 0 ? finding.pubDate: finding.alternates![activeIdx - 1].pubDate;
 
-  const hasStructured = !!(finding.finding || finding.context || finding.population || finding.implication);
-
-  const aiPrompt = `I just read a psychology finding:\n\nTitle: "${finding.title}"\nField: ${finding.field}\n\nFinding: ${finding.finding ?? finding.summary}\nImplication: ${finding.implication ?? ''}\n\nHelp me connect this to my daily life. What patterns might it point to? How could I apply this today?`;
-
-  const handleSaveInitiate = () => {
-    setShowHubPrompt(true);
-  };
+  const aiPrompt = `I just read this psychology article:\n\n"${finding.field}: ${displayHeadline}"\n\n${
+    hasBullets ? finding.bullets!.join('\n') : (finding.summary ?? '')
+  }\n\nHelp me connect this to my own patterns and daily life. What might this mean for me?`;
 
   const handleSaveConfirm = async () => {
     await saveHubItem({
       type: 'finding',
-      title: finding.title,
-      content: finding.summary,
+      title: displayHeadline,
+      content: hasBullets ? finding.bullets!.join('\n') : finding.summary,
       source: finding.source,
       url: finding.url,
       field: finding.field,
-      tags: [finding.field, finding.oneWord.toLowerCase()],
+      tags: [finding.field.toLowerCase(), finding.oneWord.toLowerCase()],
       collection: hubCollection ?? undefined,
       save_reason: hubReason || undefined,
     });
@@ -87,47 +109,57 @@ export default function FindingCard({ finding }: { finding: Finding }) {
 
   return (
     <>
-      {/* Collapsed card */}
+      {/* ── Collapsed card ────────────────────────────────────── */}
       <button
         onClick={() => setExpanded(true)}
-        className={`w-full text-left bg-white rounded-3xl p-5 shadow-card border ${style.accent} border-opacity-60 active:scale-[0.98] transition-transform`}
+        className={`w-full text-left bg-white rounded-3xl p-5 shadow-card border ${style.border} active:scale-[0.98] transition-transform`}
       >
+        {/* Top row: badge + tap hint */}
         <div className="flex items-center justify-between mb-3">
           <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${style.badge}`}>
             {finding.field}
           </span>
-          <div className="flex items-center gap-1.5 text-warm-300">
-            {hasAlternates && <span className="text-xs">{totalArticles} articles</span>}
+          <div className="flex items-center gap-1 text-warm-300">
             <span className="text-xs">tap to read</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
         </div>
 
-        <p className="font-serif text-4xl font-semibold text-warm-900 mb-2 leading-none">{finding.oneWord}</p>
-        <p className="text-warm-700 text-sm leading-snug font-medium mb-2">{finding.title}</p>
-        <p className="text-warm-400 text-xs leading-relaxed line-clamp-2">
-          {finding.finding ?? finding.summary}
+        {/* Headline — the main thing you see */}
+        <p className="font-serif text-warm-900 text-base leading-snug font-medium mb-3">
+          {displayHeadline}
         </p>
 
+        {/* First bullet as teaser */}
+        {hasBullets && finding.bullets![0] && (
+          <p className="text-warm-400 text-xs leading-relaxed line-clamp-2">
+            {parseBullet(finding.bullets![0]).text}
+          </p>
+        )}
+
+        {/* Source row */}
         <div className="flex items-center gap-2 mt-3">
-          <div className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${style.dot}`} />
           <span className="text-xs text-warm-300">{finding.source}</span>
           {finding.pubDate && <span className="text-xs text-warm-300">· {finding.pubDate}</span>}
+          {hasAlternates && (
+            <span className="ml-auto text-xs text-warm-300">{totalArticles} articles</span>
+          )}
         </div>
       </button>
 
-      {/* Expanded bottom sheet */}
+      {/* ── Expanded bottom sheet ──────────────────────────────── */}
       {expanded && (
         <div
           className="fixed inset-0 z-50 flex flex-col justify-end"
-          style={{ background: 'rgba(61,53,48,0.4)', backdropFilter: 'blur(8px)' }}
+          style={{ background: 'rgba(61,53,48,0.45)', backdropFilter: 'blur(8px)' }}
           onClick={close}
         >
           <div
             className="bg-cream rounded-t-4xl flex flex-col animate-slide-up"
-            style={{ maxHeight: '90vh' }}
+            style={{ maxHeight: '92vh' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Drag handle */}
@@ -135,8 +167,8 @@ export default function FindingCard({ finding }: { finding: Finding }) {
               <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto" />
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-              {/* Field + close */}
+            <div className="flex-1 overflow-y-auto px-6 pb-8">
+              {/* Field badge + close */}
               <div className="flex items-center justify-between mb-4">
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${style.badge}`}>
                   {finding.field}
@@ -152,79 +184,75 @@ export default function FindingCard({ finding }: { finding: Finding }) {
               {hasAlternates && (
                 <div className="flex gap-2 mb-5">
                   {Array.from({ length: totalArticles }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveIdx(i)}
+                    <button key={i} onClick={() => setActiveIdx(i)}
                       className={`flex-1 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                        activeIdx === i
-                          ? `${style.badge} border-transparent`
-                          : 'bg-white text-warm-400 border-warm-100'
-                      }`}
-                    >
+                        activeIdx === i ? `${style.badge} border-transparent` : 'bg-white text-warm-400 border-warm-100'
+                      }`}>
                       Article {i + 1}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* One word — primary article only */}
-              {activeIdx === 0 && (
-                <p className="font-serif text-5xl font-semibold text-warm-900 mb-3 leading-none">
-                  {finding.oneWord}
-                </p>
+              {/* Headline */}
+              <p className="font-serif text-warm-900 text-xl leading-snug font-medium mb-1">
+                {activeIdx === 0 ? displayHeadline : currentTitle}
+              </p>
+              {activeIdx === 0 && finding.oneWord && (
+                <p className="text-warm-300 text-xs mb-5">{finding.oneWord}</p>
               )}
 
-              {/* Title */}
-              <p className="text-warm-800 text-base font-medium leading-snug mb-5">{currentTitle}</p>
-
-              {/* Summary sections */}
-              <div className="bg-white rounded-2xl p-4 mb-5 border border-warm-100">
-                {activeIdx === 0 ? (
-                  hasStructured ? (
-                    SECTIONS.map(({ key, label }) => {
-                      const val = finding[key];
-                      if (!val) return null;
-                      return (
-                        <div key={key} className="mb-4 last:mb-0">
-                          <p className="text-xs text-warm-400 uppercase tracking-wide mb-1.5">{label}</p>
-                          <p className="text-warm-700 text-sm leading-7">{val}</p>
+              {/* Bullets (primary article) */}
+              {activeIdx === 0 && hasBullets ? (
+                <div className="space-y-3 mb-5">
+                  {finding.bullets!.map((bullet, i) => {
+                    const { label, text } = parseBullet(bullet);
+                    return (
+                      <div key={i} className="bg-white rounded-2xl px-4 py-3.5 border border-warm-100">
+                        <div className="flex items-start gap-3">
+                          <span className="text-base flex-shrink-0 mt-0.5">{BULLET_ICONS[i] ?? '·'}</span>
+                          <div>
+                            {label && (
+                              <p className="text-xs font-semibold text-warm-500 uppercase tracking-wide mb-1">{label}</p>
+                            )}
+                            <p className="text-warm-700 text-sm leading-relaxed">{text}</p>
+                          </div>
                         </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-warm-700 text-sm leading-7">{finding.summary}</p>
-                  )
-                ) : (
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Legacy / alternate article
+                <div className="bg-white rounded-2xl p-4 mb-5 border border-warm-100">
                   <p className="text-warm-700 text-sm leading-7">
-                    {finding.alternates![activeIdx - 1].desc || 'Tap "Full article" to read more.'}
+                    {activeIdx === 0
+                      ? (finding.finding ? [finding.finding, finding.context, finding.population, finding.implication].filter(Boolean).join('\n\n') : finding.summary)
+                      : (finding.alternates![activeIdx - 1].desc || 'Tap "Full article" to read more.')}
                   </p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Source row */}
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-5">
                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${style.dot}`} />
                 <span className="text-xs text-warm-400">{currentSource}</span>
                 {currentPubDate && <span className="text-xs text-warm-300">· {currentPubDate}</span>}
                 {currentUrl && (
-                  <a
-                    href={currentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto text-xs text-sage font-medium underline underline-offset-2 flex-shrink-0"
-                    onClick={e => e.stopPropagation()}
-                  >
+                  <a href={currentUrl} target="_blank" rel="noopener noreferrer"
+                    className="ml-auto text-xs text-sage font-medium"
+                    onClick={e => e.stopPropagation()}>
                     Full article ↗
                   </a>
                 )}
               </div>
 
-              {/* Actions — primary article only */}
+              {/* Actions */}
               {activeIdx === 0 && (
                 <div className="flex items-center justify-between pt-4 border-t border-warm-100 pb-2">
                   <ReflectWithAI context={aiPrompt} label="Reflect with AI" />
                   <button
-                    onClick={handleSaveInitiate}
+                    onClick={() => setShowHubPrompt(true)}
                     disabled={saved}
                     className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium transition-all active:scale-95 ${
                       saved ? 'bg-sage-pale text-sage' : 'bg-warm-100 text-warm-600'
@@ -242,7 +270,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
         </div>
       )}
 
-      {/* Hub save prompt */}
+      {/* ── Hub save prompt ────────────────────────────────────── */}
       {showHubPrompt && (
         <div className="fixed inset-0 z-[60] flex flex-col justify-end"
           style={{ background: 'rgba(61,53,48,0.4)', backdropFilter: 'blur(6px)' }}
@@ -252,7 +280,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
             onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto mb-5" />
             <p className="font-serif text-xl text-warm-900 mb-1">What made this useful?</p>
-            <p className="text-warm-500 text-xs mb-4 leading-snug line-clamp-2">"{finding.title}"</p>
+            <p className="text-warm-400 text-xs mb-5 leading-snug line-clamp-2">"{displayHeadline}"</p>
 
             <div className="grid grid-cols-2 gap-2 mb-4">
               {HUB_COLLECTIONS.map(c => (

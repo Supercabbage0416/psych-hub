@@ -8,8 +8,9 @@ import DailyCheckIn from '@/components/DailyCheckIn';
 import CheckInSummary from '@/components/CheckInSummary';
 import RecoveryNudgeCard from '@/components/RecoveryNudgeCard';
 import { getTodayCheckIn } from '@/lib/supabase';
-import { getFieldRecommendations } from '@/lib/checkin';
-import type { PartialCheckIn, FieldRecommendation } from '@/lib/checkin';
+import type { PartialCheckIn } from '@/lib/checkin';
+import { getCategoriesForCheckIn, getCategoryReason } from '@/lib/articleCategories';
+import type { CategoryId } from '@/lib/articleCategories';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -22,22 +23,14 @@ function formatDate() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-function RecommendationContext({ recs }: { recs: FieldRecommendation[] }) {
-  if (recs.length === 0) return null;
-  const top = recs[0];
-  return (
-    <p className="text-xs text-warm-400 leading-snug mb-3">
-      Based on your check-in — <span className="text-warm-600">{top.reason.toLowerCase()}</span>
-    </p>
-  );
-}
 
 export default function HomePage() {
   const [checkIn, setCheckIn] = useState<PartialCheckIn | null>(null);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [recs, setRecs] = useState<FieldRecommendation[]>([]);
+  const [categories, setCategories] = useState<CategoryId[]>([]);
+  const [reasonMap, setReasonMap] = useState<Partial<Record<CategoryId, string>>>({});
 
   useEffect(() => {
     getTodayCheckIn().then((data) => {
@@ -50,7 +43,11 @@ export default function HomePage() {
           socialSafety: data.social_safety,
         };
         setCheckIn(ci);
-        setRecs(getFieldRecommendations(ci));
+        const cats = getCategoriesForCheckIn(ci);
+        setCategories(cats);
+        const reasons: Partial<Record<CategoryId, string>> = {};
+        cats.forEach(id => { reasons[id] = getCategoryReason(id, ci); });
+        setReasonMap(reasons);
       } else {
         setShowCheckIn(true);
       }
@@ -60,7 +57,11 @@ export default function HomePage() {
 
   const handleCheckInComplete = (ci: PartialCheckIn) => {
     setCheckIn(ci);
-    setRecs(getFieldRecommendations(ci));
+    const cats = getCategoriesForCheckIn(ci);
+    setCategories(cats);
+    const reasons: Partial<Record<CategoryId, string>> = {};
+    cats.forEach(id => { reasons[id] = getCategoryReason(id, ci); });
+    setReasonMap(reasons);
     setShowCheckIn(false);
   };
 
@@ -101,16 +102,15 @@ export default function HomePage() {
       </section>
 
       {/* Section 3: What can help me understand myself today? */}
-      <section className="mb-5">
-        <div className="flex items-baseline justify-between mb-2">
-          <p className="text-xs text-warm-400 uppercase tracking-wide">For you today</p>
-          {recs.length > 0 && (
-            <span className="text-xs text-warm-300">based on how you feel</span>
-          )}
-        </div>
-        {checkIn && <RecommendationContext recs={recs} />}
-        <DailyFindings recommendedFields={recs.map(r => r.field)} />
-      </section>
+      {categories.length > 0 && (
+        <section className="mb-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-xs text-warm-400 uppercase tracking-wide">For you today</p>
+            <span className="text-xs text-warm-300">{categories.length} matched topics</span>
+          </div>
+          <DailyFindings categories={categories} reasonMap={reasonMap} />
+        </section>
+      )}
 
       {/* Growth markers */}
       <section className="mb-6">

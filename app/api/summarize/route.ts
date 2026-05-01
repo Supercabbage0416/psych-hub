@@ -44,8 +44,10 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     if (body.type === 'findings') {
-      const { field, items } = body as {
-        field: string;
+      const { categoryId, categoryLabel, categoryDescription, items } = body as {
+        categoryId: string;
+        categoryLabel: string;
+        categoryDescription: string;
         items: { title: string; desc: string; url: string; pubDate: string }[];
       };
 
@@ -55,32 +57,36 @@ export async function POST(req: Request) {
 
       const articleList = items
         .map((a: { title: string; desc: string }, i: number) =>
-          `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 800)}`
+          `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 1000)}`
         )
         .join('\n\n');
 
-      const prompt = `You are curating daily psychology content for someone building self-awareness and understanding of human behavior.
+      const prompt = `You are selecting the single most useful psychology article for someone who is using this app to support their mental wellbeing and self-understanding.
 
-Field: ${field}
-What belongs here: ${FIELD_DESCRIPTIONS[field] ?? field}
+Category: ${categoryLabel}
+What this category is about: ${categoryDescription}
 
-From the articles below, rank the TOP 3 most relevant to this exact field. Reject anything off-topic (medical conditions, AI technology, politics, climate, general science).
+Your job:
+1. Rank the 3 most relevant articles from the list below (reject anything off-topic, medical, AI/tech, political, or about diseases/drugs).
+2. For the top-ranked article, write a clean, human, easy-to-read summary in bullet format.
 
-For the #1 ranked article, write a structured summary with these four sections:
-- finding: The core research finding, stated precisely (2 sentences)
-- context: The background or setting that makes this significant (1-2 sentences)
-- population: Who this was studied on or who it affects (1 sentence)
-- implication: What this means for everyday life and one concrete action to take (2 sentences)
+The summary should have exactly 4 bullets:
+- "What they found:" — the core research finding in plain, conversational language (1-2 sentences, no jargon)
+- "Why this happens:" — the mechanism, psychology, or reason behind it (1-2 sentences)
+- "What this means for you:" — personal relevance, especially for someone dealing with stress, self-doubt, or recovery (1-2 sentences)
+- "One thing to try:" — a small, concrete action inspired by this research (1 sentence, specific and gentle)
 
-Also choose ONE powerful word (noun or verb) that captures the essence.
+Also write:
+- headline: One punchy, clear sentence that captures the finding (this is what people see first — make it interesting and human, not academic)
+- oneWord: One noun that captures the theme (e.g. "Resilience", "Shame", "Belonging", "Rest")
 
 Articles:
 ${articleList}
 
-Respond ONLY in valid JSON with no markdown:
-{"rankings": [1, 2, 3], "finding": "...", "context": "...", "population": "...", "implication": "...", "oneWord": "..."}`;
+Respond ONLY in valid JSON, no markdown:
+{"rankings": [1, 2, 3], "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."], "oneWord": "..."}`;
 
-      const text = await callDeepSeek(prompt, 700);
+      const text = await callDeepSeek(prompt, 600);
       const parsed = JSON.parse(text);
       return NextResponse.json(parsed);
     }
