@@ -13,6 +13,14 @@ const FIELD_DESCRIPTIONS: Record<string, string> = {
   'Stress & Recovery': 'stress management, recovery, mindfulness, sleep, rest, resilience, emotional regulation, relaxation, self-care',
 };
 
+function toSource(url: string) {
+  try { return new URL(url).hostname.replace('www.', ''); } catch { return 'Research'; }
+}
+function toPubDate(raw: string) {
+  if (!raw) return '';
+  try { return new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return ''; }
+}
+
 async function deepseekSelect(
   field: string,
   items: RawItem[],
@@ -24,27 +32,26 @@ async function deepseekSelect(
     .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 300)}`)
     .join('\n\n');
 
-  const prompt = `You are curating daily psychology content for someone who wants to build self-awareness, reduce stress, and understand human behavior better.
+  const prompt = `You are curating daily psychology content for someone building self-awareness and understanding of human behavior.
 
 Field: ${field}
 What belongs here: ${FIELD_DESCRIPTIONS[field] ?? field}
 
-From the articles below, select the ONE most relevant and insightful article that genuinely belongs to this field. Reject anything off-topic, even slightly.
+From the articles below, rank the TOP 3 most relevant to this exact field. Reject anything off-topic (medical conditions, AI technology, politics, climate, general science).
 
-Then write a warm, complete 5-sentence summary that:
-1. States the core finding clearly
-2. Explains WHY this matters to everyday life
-3. Gives one concrete example of how it shows up in real life
-4. Connects it to self-awareness or emotional wellbeing
-5. Ends with one small, practical takeaway
+For the #1 ranked article, write a structured summary with these four sections:
+- finding: The core research finding, stated precisely (2 sentences)
+- context: The background or setting that makes this significant (1-2 sentences)
+- population: Who this was studied on or who it affects (1 sentence)
+- implication: What this means for everyday life and one concrete action to take (2 sentences)
 
-Also choose ONE powerful word (a noun or verb) that captures the essence of this finding.
+Also choose ONE powerful word (noun or verb) that captures the essence.
 
 Articles:
 ${articleList}
 
 Respond ONLY in valid JSON with no markdown:
-{"index": 1, "summary": "...", "oneWord": "..."}`;
+{"rankings": [1, 2, 3], "finding": "...", "context": "...", "population": "...", "implication": "...", "oneWord": "..."}`;
 
   try {
     const res = await fetch('https://api.deepseek.com/chat/completions', {
@@ -56,7 +63,7 @@ Respond ONLY in valid JSON with no markdown:
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 400,
+        max_tokens: 700,
         temperature: 0.3,
       }),
     });
@@ -68,32 +75,36 @@ Respond ONLY in valid JSON with no markdown:
 
     const data = await res.json();
     const text = (data.choices?.[0]?.message?.content ?? '').trim();
-
-    // Strip any markdown code blocks
     const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
     const parsed = JSON.parse(cleaned);
 
-    const idx = (parsed.index ?? 1) - 1;
-    const picked = items[idx] ?? items[0];
+    const rankings: number[] = Array.isArray(parsed.rankings) ? parsed.rankings : [1];
+    const topIdx = Math.max(0, (rankings[0] ?? 1) - 1);
+    const picked = items[topIdx] ?? items[0];
 
-    const source = (() => {
-      try { return new URL(picked.url).hostname.replace('www.', ''); }
-      catch { return 'Research'; }
-    })();
+    // Build alternates from 2nd and 3rd ranked articles
+    const alternates = rankings.slice(1, 3).map(rank => {
+      const item = items[Math.max(0, rank - 1)];
+      if (!item) return null;
+      return { title: item.title, url: item.url, source: toSource(item.url), pubDate: toPubDate(item.pubDate), desc: item.desc };
+    }).filter((x): x is NonNullable<typeof x> => x !== null);
 
-    const pubDate = picked.pubDate ? (() => {
-      try { return new Date(picked.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
-      catch { return ''; }
-    })() : '';
+    const summary = [parsed.finding, parsed.context, parsed.population, parsed.implication]
+      .filter(Boolean).join(' ');
 
     return {
       field,
       title: picked.title,
-      summary: parsed.summary ?? picked.desc,
-      source,
+      summary: summary || picked.desc,
+      finding: parsed.finding,
+      context: parsed.context,
+      population: parsed.population,
+      implication: parsed.implication,
+      source: toSource(picked.url),
       url: picked.url,
       oneWord: parsed.oneWord ?? 'Insight',
-      pubDate,
+      pubDate: toPubDate(picked.pubDate),
+      alternates,
     };
   } catch (e) {
     console.error(`DeepSeek parse error for ${field}:`, e);
@@ -129,7 +140,7 @@ export default function DailyFindings() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v3_${today}`;
+    const cacheKey = `findings_v4_${today}`;
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
