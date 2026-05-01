@@ -13,19 +13,33 @@ async function callDeepSeek(prompt: string, maxTokens = 800): Promise<string> {
       max_tokens: maxTokens,
       temperature: 0.4,
     }),
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  return (data.choices?.[0]?.message?.content ?? '').trim().replace(/```json\n?|\n?```/g, '').trim();
+  return (data.choices?.[0]?.message?.content ?? '').trim();
+}
+
+// Extract JSON from text that may have prose before/after or markdown fences
+function extractJson(text: string): unknown {
+  let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  try { return JSON.parse(cleaned); } catch { /* continue */ }
+
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* continue */ }
+  }
+
+  throw new Error(`Could not extract JSON from response: ${text.slice(0, 200)}`);
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // ── Analyze: extract mood/motivation/status + generate recommendation ──
     if (body.type === 'analyze') {
       const { journals, moods, weeklyReflections, recoveryRecords, recoveryStage } = body;
 
@@ -53,7 +67,7 @@ export async function POST(req: Request) {
         })
         .join('\n');
 
-      const prompt = `You are a warm, psychologically-informed personal coach reading someone's private journal and recovery data to understand where they truly are right now.
+      const prompt = `You are a warm, psychologically-informed personal coach reading someone's private journal and recovery data.
 
 Here is their data from the past 2 weeks:
 
@@ -71,22 +85,20 @@ RECOVERY LOG (last 7 days):
 ${recoveryText || 'No recovery records'}
 
 Based on ALL of this, extract and respond with:
+1. mood: One short phrase capturing their dominant emotional state (human, not clinical — e.g. "exhausted but trying", "quietly anxious")
+2. motivation: The core thing driving or blocking them right now — one sentence
+3. status: A 1-sentence honest assessment of where they are in their wellbeing journey
+4. recommendation: A specific 3-4 sentence plan for this week based on what you see. Address actual patterns, not generic advice.
+5. reasoning: 1-2 sentences explaining WHY you recommend this, connecting to what you observed
 
-1. mood: One word or short phrase capturing their dominant emotional state right now (not a clinical label — something human like "exhausted but trying", "quietly anxious", "slowly steadying")
-2. motivation: The core thing that seems to be driving or blocking them right now — one sentence
-3. status: A 1-sentence honest assessment of where they are in their recovery/wellbeing journey
-4. recommendation: A specific, adapted 3-4 sentence plan for this week based on what you see. It should address their actual patterns, not generic advice. Be direct but kind.
-5. reasoning: 1-2 sentences explaining WHY you're recommending this, connecting it to what you actually observed in their data
-
-Respond ONLY in valid JSON with no markdown:
+Respond ONLY in valid JSON with no extra text:
 {"mood": "...", "motivation": "...", "status": "...", "recommendation": "...", "reasoning": "..."}`;
 
-      const text = await callDeepSeek(prompt, 600);
-      const parsed = JSON.parse(text);
+      const text = await callDeepSeek(prompt, 800);
+      const parsed = extractJson(text);
       return NextResponse.json(parsed);
     }
 
-    // ── Respond: continue conversation after user comments on recommendation ──
     if (body.type === 'respond') {
       const { thread, userComment, mood, motivation, status, recommendation } = body;
 
@@ -94,9 +106,9 @@ Respond ONLY in valid JSON with no markdown:
         .map(m => `${m.role === 'ai' ? 'Coach' : 'You'}: ${m.content}`)
         .join('\n\n');
 
-      const prompt = `You are a warm personal coach in an ongoing conversation with someone about their weekly plan and wellbeing.
+      const prompt = `You are a warm personal coach in an ongoing conversation about someone's weekly plan.
 
-Context about them right now:
+Context:
 - Mood: ${mood}
 - Core motivation/block: ${motivation}
 - Status: ${status}
@@ -107,18 +119,11 @@ The plan you suggested:
 Conversation so far:
 ${threadText}
 
-Their latest message:
-"${userComment}"
+Their latest message: "${userComment}"
 
-Respond naturally as a coach. You can:
-- Accept their pushback and adjust the recommendation
-- Validate their concern and offer a gentler alternative
-- Ask one clarifying question if needed
-- Affirm what they said and build on it
+Respond naturally as a coach — accept pushback, offer gentler alternatives, ask one clarifying question if needed, or affirm and build on what they said. Keep to 2-4 sentences. Be direct, warm, specific. No bullet points.`;
 
-Keep your response to 2-4 sentences. Be direct, warm, and specific. Do not use bullet points.`;
-
-      const response = await callDeepSeek(prompt, 300);
+      const response = await callDeepSeek(prompt, 350);
       return NextResponse.json({ response });
     }
 

@@ -1,18 +1,8 @@
 import { NextResponse } from 'next/server';
 
-// Server-side DeepSeek proxy — key never exposed to browser
-// Called by DailyFindings (article selection + summary) and AIInsights (pattern analysis)
-
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
-const FIELD_DESCRIPTIONS: Record<string, string> = {
-  'Behavioral': 'behavioral psychology, habits, emotions, cognitive patterns, motivation, decision-making, coping, mental health',
-  'I/O & Work': 'workplace psychology, organizational behavior, leadership, team dynamics, employee wellbeing, job performance, burnout at work, productivity',
-  'Group & Social': 'social psychology, group dynamics, conformity, peer influence, belonging, relationships, social identity, community',
-  'Stress & Recovery': 'stress management, recovery, mindfulness, sleep, rest, resilience, emotional regulation, relaxation, self-care',
-};
-
-async function callDeepSeek(prompt: string, maxTokens = 700): Promise<string> {
+async function callDeepSeek(prompt: string, maxTokens = 900): Promise<string> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
 
@@ -25,7 +15,7 @@ async function callDeepSeek(prompt: string, maxTokens = 700): Promise<string> {
       max_tokens: maxTokens,
       temperature: 0.3,
     }),
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!res.ok) {
@@ -34,11 +24,27 @@ async function callDeepSeek(prompt: string, maxTokens = 700): Promise<string> {
   }
 
   const data = await res.json();
-  return (data.choices?.[0]?.message?.content ?? '').trim().replace(/```json\n?|\n?```/g, '').trim();
+  return (data.choices?.[0]?.message?.content ?? '').trim();
 }
 
-// POST /api/summarize
-// Body: { type: 'findings', field, items } | { type: 'insights', stage, daysInStage, records }
+// Extract JSON from text that may have prose before/after or markdown fences
+function extractJson(text: string): unknown {
+  // Strip markdown fences
+  let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  // Try direct parse first
+  try { return JSON.parse(cleaned); } catch { /* continue */ }
+
+  // Find first { and last } and try that slice
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* continue */ }
+  }
+
+  throw new Error(`Could not extract JSON from DeepSeek response: ${text.slice(0, 200)}`);
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -56,38 +62,36 @@ export async function POST(req: Request) {
       }
 
       const articleList = items
-        .map((a: { title: string; desc: string }, i: number) =>
-          `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 1000)}`
-        )
+        .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 800)}`)
         .join('\n\n');
 
-      const prompt = `You are selecting the single most useful psychology article for someone who is using this app to support their mental wellbeing and self-understanding.
+      const prompt = `You are selecting the single most useful psychology article for someone supporting their mental wellbeing.
 
 Category: ${categoryLabel}
 What this category is about: ${categoryDescription}
 
 Your job:
-1. Rank the 3 most relevant articles from the list below (reject anything off-topic, medical, AI/tech, political, or about diseases/drugs).
-2. For the top-ranked article, write a clean, human, easy-to-read summary in bullet format.
+1. Rank the 3 most relevant articles (reject anything off-topic, medical, AI/tech, political, or about diseases/drugs).
+2. For the top-ranked article, write a clean 4-bullet summary.
 
-The summary should have exactly 4 bullets:
-- "What they found:" — the core research finding in plain, conversational language (1-2 sentences, no jargon)
-- "Why this happens:" — the mechanism, psychology, or reason behind it (1-2 sentences)
-- "What this means for you:" — personal relevance, especially for someone dealing with stress, self-doubt, or recovery (1-2 sentences)
-- "One thing to try:" — a small, concrete action inspired by this research (1 sentence, specific and gentle)
+Bullets (exactly this format):
+- "What they found: ..." (core research finding, plain language, 1-2 sentences)
+- "Why this happens: ..." (the mechanism or psychology behind it, 1-2 sentences)
+- "What this means for you: ..." (personal relevance for stress/self-doubt/recovery, 1-2 sentences)
+- "One thing to try: ..." (one small concrete action, 1 sentence)
 
-Also write:
-- headline: One punchy, clear sentence that captures the finding (this is what people see first — make it interesting and human, not academic)
-- oneWord: One noun that captures the theme (e.g. "Resilience", "Shame", "Belonging", "Rest")
+Also provide:
+- headline: One punchy human sentence capturing the finding (not academic)
+- oneWord: One noun capturing the theme (e.g. "Resilience", "Rest", "Shame")
 
 Articles:
 ${articleList}
 
-Respond ONLY in valid JSON, no markdown:
+Respond ONLY in valid JSON with no extra text:
 {"rankings": [1, 2, 3], "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."], "oneWord": "..."}`;
 
-      const text = await callDeepSeek(prompt, 600);
-      const parsed = JSON.parse(text);
+      const text = await callDeepSeek(prompt, 900);
+      const parsed = extractJson(text);
       return NextResponse.json(parsed);
     }
 
@@ -126,11 +130,11 @@ Based only on what you observe above, provide a warm and honest behavioral analy
 
 Be specific to their actual reflections. Avoid clinical language. Do not diagnose. Keep tone warm and human.
 
-Respond ONLY in valid JSON with no markdown:
+Respond ONLY in valid JSON with no extra text:
 {"themes": ["...", "..."], "working": "...", "challenging": "...", "growth": "...", "suggestion": "..."}`;
 
-      const text = await callDeepSeek(prompt, 600);
-      const parsed = JSON.parse(text);
+      const text = await callDeepSeek(prompt, 700);
+      const parsed = extractJson(text);
       return NextResponse.json(parsed);
     }
 
