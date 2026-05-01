@@ -187,11 +187,11 @@ export default function DailyFindings({ categories = [], reasonMap = {} }: Props
   useEffect(() => {
     if (categories.length === 0) return; // wait for check-in
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v9_${today}_${[...categories].sort().join(',')}`;
+    const cacheKey = `findings_v10_${today}_${[...categories].sort().join(',')}`;
 
     // Clean up all older cache versions
     Object.keys(localStorage).forEach(k => {
-      if (/^findings_v[2-8]_/.test(k)) localStorage.removeItem(k);
+      if (/^findings_v[2-9]_/.test(k)) localStorage.removeItem(k);
     });
 
     const cached = localStorage.getItem(cacheKey);

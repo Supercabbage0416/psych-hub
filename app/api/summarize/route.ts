@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'edge'; // 30s limit vs 10s for serverless on Hobby plan
+
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
 async function callDeepSeek(prompt: string, maxTokens = 400): Promise<string> {
@@ -15,7 +17,7 @@ async function callDeepSeek(prompt: string, maxTokens = 400): Promise<string> {
       max_tokens: maxTokens,
       temperature: 0.3,
     }),
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(25000),
   });
 
   if (!res.ok) {

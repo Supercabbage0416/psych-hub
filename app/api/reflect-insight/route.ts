@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'edge'; // 30s limit vs 10s for serverless on Hobby plan
+
 async function callDeepSeek(prompt: string, maxTokens = 800): Promise<string> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
@@ -13,7 +15,7 @@ async function callDeepSeek(prompt: string, maxTokens = 800): Promise<string> {
       max_tokens: maxTokens,
       temperature: 0.4,
     }),
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(25000),
   });
 
   if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${await res.text()}`);
