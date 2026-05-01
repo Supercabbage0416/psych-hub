@@ -15,7 +15,7 @@ export async function GET() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: 'deepseek-v4-flash',
+          model: 'deepseek-chat',
           messages: [{ role: 'user', content: 'Reply with exactly: {"ok": true}' }],
           max_tokens: 20,
           temperature: 0,
