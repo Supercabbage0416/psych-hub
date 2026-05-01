@@ -3,54 +3,60 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+const ACTIVE = '#95B0D9';
+const IDLE   = '#5C5750';
+
 const tabs = [
   {
     href: '/',
-    label: 'Today',
+    label: 'Tonight',
     icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#7A9A6E' : '#9B8E88'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-        <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+      // Moon
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
     ),
   },
   {
     href: '/recover',
-    label: 'Recover',
+    label: 'Mend',
     icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#7A9A6E' : '#9B8E88'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10" />
-        <polyline points="16 12 12 8 8 12" />
-        <line x1="12" y1="8" x2="12" y2="16" />
+      // Leaf
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
       </svg>
     ),
   },
   {
     href: '/journal',
-    label: 'Journal',
+    label: 'Pages',
     icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#7A9A6E' : '#9B8E88'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      // Pen / edit
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
       </svg>
     ),
   },
   {
     href: '/hub',
-    label: 'Hub',
+    label: 'Keepsakes',
     icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#7A9A6E' : '#9B8E88'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+      // Heart
+      <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? ACTIVE : 'none'} stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
       </svg>
     ),
   },
   {
     href: '/reflect',
-    label: 'Reflect',
+    label: 'Patterns',
     icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#7A9A6E' : '#9B8E88'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      // Waves
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+        <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+        <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
       </svg>
     ),
   },
@@ -60,8 +66,15 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-warm-100 z-50"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-warm-100"
+      style={{
+        background: 'rgba(15,24,40,0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {tabs.map((tab) => {
           const active = pathname === tab.href;
@@ -69,7 +82,7 @@ export default function BottomNav() {
             <Link key={tab.href} href={tab.href}
               className="flex flex-col items-center gap-1 min-w-[48px] py-1">
               {tab.icon(active)}
-              <span className={`text-xs font-medium transition-colors ${active ? 'text-sage' : 'text-warm-500'}`}>
+              <span className={`text-xs font-medium transition-colors ${active ? 'text-sage' : 'text-warm-300'}`}>
                 {tab.label}
               </span>
             </Link>

@@ -110,7 +110,7 @@ export default function DailyCheckIn({ onComplete, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ background: 'rgba(61,53,48,0.35)', backdropFilter: 'blur(6px)' }}
+      style={{ background: 'rgba(10,18,32,0.65)', backdropFilter: 'blur(6px)' }}
       onClick={onClose}>
       <div className="bg-cream rounded-t-4xl px-6 pt-5 pb-10 flex flex-col"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}

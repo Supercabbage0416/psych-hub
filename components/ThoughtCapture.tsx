@@ -125,7 +125,7 @@ Help me think deeper — what patterns or themes do you notice?`;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ background: 'rgba(61,53,48,0.25)', backdropFilter: 'blur(4px)' }}>
+      style={{ background: 'rgba(10,18,32,0.55)', backdropFilter: 'blur(4px)' }}>
       <div className="bg-cream rounded-t-4xl px-6 pt-5 pb-8 max-h-[90vh] flex flex-col"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}>
 

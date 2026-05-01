@@ -91,7 +91,7 @@ export default function DailyReflection({ state, onStateChange, onClose }: Props
   if (done) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col justify-end"
-        style={{ background: 'rgba(61,53,48,0.5)', backdropFilter: 'blur(8px)' }}>
+        style={{ background: 'rgba(10,18,32,0.80)', backdropFilter: 'blur(8px)' }}>
         <div className="bg-cream rounded-t-4xl px-6 pt-6 pb-10 animate-slide-up">
           <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto mb-6" />
           <div className="text-center">
@@ -117,7 +117,7 @@ export default function DailyReflection({ state, onStateChange, onClose }: Props
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ background: 'rgba(61,53,48,0.5)', backdropFilter: 'blur(8px)' }}
+      style={{ background: 'rgba(10,18,32,0.80)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
       <div

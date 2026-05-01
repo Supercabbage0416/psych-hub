@@ -46,9 +46,8 @@ export default function RecoverPage() {
     <div className="px-5 pt-8 animate-fade-in pb-4">
       {/* Header */}
       <div className="mb-5">
-        <p className="text-warm-400 text-xs uppercase tracking-wide mb-0.5">Recovery</p>
-        <h1 className="font-serif text-3xl text-warm-900">Your path</h1>
-        <p className="text-warm-400 text-sm mt-1 leading-snug">You are rebuilding trust with yourself.</p>
+        <p className="text-warm-400 text-xs uppercase tracking-wide mb-0.5">Where you are tonight</p>
+        <h1 className="font-serif text-3xl text-warm-900">Mend</h1>
       </div>
 
       {/* Tab bar */}

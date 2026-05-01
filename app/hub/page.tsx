@@ -41,7 +41,7 @@ function MeaningfulPrompt({ item, onDone, onSkip }: MeaningfulPromptProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ background: 'rgba(61,53,48,0.4)', backdropFilter: 'blur(6px)' }}>
+      style={{ background: 'rgba(10,18,32,0.70)', backdropFilter: 'blur(6px)' }}>
       <div className="bg-cream rounded-t-4xl px-6 pt-6 pb-10"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}>
         <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto mb-5" />
@@ -166,8 +166,8 @@ export default function HubPage() {
     <div className="px-5 pt-8 pb-28 animate-fade-in">
       <div className="flex items-end justify-between mb-4">
         <div>
-          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">Your library</p>
-          <h1 className="font-serif text-3xl text-warm-900">Hub</h1>
+          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">What you're keeping</p>
+          <h1 className="font-serif text-3xl text-warm-900">Keepsakes</h1>
         </div>
         <button onClick={() => setShowNoteForm(!showNoteForm)}
           className="bg-sage text-white text-sm px-4 py-2 rounded-full font-medium active:scale-95 transition-transform">

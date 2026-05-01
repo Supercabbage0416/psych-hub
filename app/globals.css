@@ -8,8 +8,8 @@
 }
 
 html, body {
-  background-color: #FAF8F4;
-  color: #3D3530;
+  background-color: #0A1220;
+  color: #E6E1D7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -22,13 +22,18 @@ html, body {
   }
 }
 
-/* Smooth scrolling */
+/* Dark surface override — bg-white becomes midnight card surface */
+.bg-white {
+  background-color: #0F1828;
+}
+
+/* Smooth interactions */
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
 }
 
-/* Custom scrollbar */
+/* Hide scrollbar */
 ::-webkit-scrollbar { width: 0; }
 
 /* Bottom safe area utility */

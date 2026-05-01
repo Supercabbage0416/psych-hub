@@ -78,7 +78,7 @@ export default function HomePage() {
       {/* Header */}
       <div className="mb-6">
         <p className="text-warm-400 text-sm mb-0.5">{formatDate()}</p>
-        <h1 className="font-serif text-3xl text-warm-900">{getGreeting()}</h1>
+        <h1 className="font-serif text-3xl text-warm-900">Tonight</h1>
       </div>
 
       {/* Section 1: How am I today? */}

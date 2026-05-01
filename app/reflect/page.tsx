@@ -10,8 +10,8 @@ export default function ReflectPage() {
   return (
     <div className="px-5 pt-8 animate-fade-in pb-8">
       <div className="mb-5">
-        <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">Your space</p>
-        <h1 className="font-serif text-3xl text-warm-900">Reflect</h1>
+        <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">The shape of your weeks</p>
+        <h1 className="font-serif text-3xl text-warm-900">Patterns</h1>
       </div>
 
       {/* Tab switcher */}

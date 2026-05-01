@@ -154,7 +154,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
       {expanded && (
         <div
           className="fixed inset-0 z-50 flex flex-col justify-end"
-          style={{ background: 'rgba(61,53,48,0.45)', backdropFilter: 'blur(8px)' }}
+          style={{ background: 'rgba(10,18,32,0.75)', backdropFilter: 'blur(8px)' }}
           onClick={close}
         >
           <div
@@ -273,7 +273,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
       {/* ── Hub save prompt ────────────────────────────────────── */}
       {showHubPrompt && (
         <div className="fixed inset-0 z-[60] flex flex-col justify-end"
-          style={{ background: 'rgba(61,53,48,0.4)', backdropFilter: 'blur(6px)' }}
+          style={{ background: 'rgba(10,18,32,0.70)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowHubPrompt(false)}>
           <div className="bg-cream rounded-t-4xl px-6 pt-6 pb-10"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}

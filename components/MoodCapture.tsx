@@ -27,7 +27,7 @@ export default function MoodCapture({ onComplete }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ background: 'rgba(61,53,48,0.3)', backdropFilter: 'blur(4px)' }}>
+      style={{ background: 'rgba(10,18,32,0.60)', backdropFilter: 'blur(4px)' }}>
       <div className="bg-cream rounded-t-4xl px-6 pt-8 pb-safe-8 animate-slide-up"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}>
 

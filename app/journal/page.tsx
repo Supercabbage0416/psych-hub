@@ -62,8 +62,8 @@ export default function JournalPage() {
     <div className="px-5 pt-8 pb-28 animate-fade-in">
       <div className="flex items-end justify-between mb-5">
         <div>
-          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">Your thoughts</p>
-          <h1 className="font-serif text-3xl text-warm-900">Journal</h1>
+          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">What you've been carrying</p>
+          <h1 className="font-serif text-3xl text-warm-900">Pages</h1>
         </div>
         <button
           onClick={() => openCapture()}

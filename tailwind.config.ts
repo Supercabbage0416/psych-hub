@@ -9,26 +9,33 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Surfaces — deep midnight blue
         cream: {
-          DEFAULT: '#FAF8F4',
-          dark: '#F0EBE3',
+          DEFAULT: '#0F1828',   // was page-bg cream — now main card surface
+          dark: '#142136',      // elevated surface
         },
+        // Primary accent — soft blue (was sage green)
         sage: {
-          DEFAULT: '#7A9A6E',
-          light: '#A8C09E',
-          pale: '#D4E5CF',
+          DEFAULT: '#95B0D9',
+          light: '#6E8AB8',
+          pale: '#1B2D48',      // subtle surface tint
         },
+        // Secondary accent
         rose: {
-          DEFAULT: '#C4959B',
-          light: '#DEB8BC',
-          pale: '#F0D8DA',
+          DEFAULT: '#C99CA0',
+          light: '#B08488',
+          pale: '#1E1618',
         },
+        // Text scale — inverted for dark mode
+        // 900 = lightest (primary text), 100 = darkest (borders/surfaces)
         warm: {
-          900: '#3D3530',
-          700: '#6B5F59',
-          500: '#9B8E88',
-          300: '#C8BFB9',
-          100: '#EDE8E3',
+          900: '#E6E1D7',       // primary text (was near-black)
+          700: '#B8B0A2',       // body / sub text
+          500: '#8A8276',       // muted
+          400: '#736B65',       // dim-muted
+          300: '#5C5750',       // dim
+          100: '#1B2D48',       // borders / line
+          50:  '#0F1828',       // surface bg (for inputs etc.)
         },
       },
       fontFamily: {
@@ -41,8 +48,8 @@ const config: Config = {
         '4xl': '2rem',
       },
       boxShadow: {
-        soft: '0 2px 16px rgba(61,53,48,0.06)',
-        card: '0 1px 8px rgba(61,53,48,0.08)',
+        soft: '0 2px 20px rgba(10,18,32,0.5)',
+        card: '0 1px 8px rgba(10,18,32,0.6)',
       },
     },
   },
