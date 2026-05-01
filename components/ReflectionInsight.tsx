@@ -111,14 +111,18 @@ export default function ReflectionInsight() {
       });
 
       if (!res.ok) {
-        const errText = await res.text();
-        if (res.status === 402 || errText.includes('balance') || errText.includes('credit')) {
-          throw new Error('AI service temporarily unavailable. Try again later.');
+        let errText = '';
+        try { const j = await res.json(); errText = j.error ?? ''; } catch { errText = await res.text().catch(() => ''); }
+        if (errText.includes('balance') || errText.includes('credit') || errText.includes('insufficient')) {
+          throw new Error('AI service quota reached. Try again tomorrow or check your DeepSeek balance.');
         }
-        if (res.status >= 500) {
-          throw new Error('Server error. Try again in a moment.');
+        if (errText.includes('DEEPSEEK_API_KEY')) {
+          throw new Error('DeepSeek API key is not configured on the server.');
         }
-        throw new Error(`Request failed (${res.status})`);
+        if (errText.includes('timeout') || errText.includes('TimeoutError')) {
+          throw new Error('Request timed out. DeepSeek may be slow — try again in a moment.');
+        }
+        throw new Error(errText || `Server error (${res.status})`);
       }
       const data: Insight = await res.json();
 
