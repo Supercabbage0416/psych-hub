@@ -1,74 +1,60 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getUserArticles, deleteUserArticle, saveHubItem } from '@/lib/supabase';
-import ArticleForm from '@/components/ArticleForm';
+import { getHubItems, deleteHubItem } from '@/lib/supabase';
 
-interface Article {
-  id: string; title: string; content: string; source: string; url: string;
-  category_id: string; category_name: string; summary: string; sentiment: string;
+interface HubItem {
+  id: string; type: string; title: string; content: string;
+  source: string; url: string; field: string; tags: string[];
   created_at: string;
 }
 
-const categoryBadge: Record<string, string> = {
-  behavioral: 'bg-sage-pale text-sage',
-  io_work: 'bg-rose-pale text-rose',
-  wellbeing: 'bg-amber-50 text-amber-700',
-};
-
-const sentimentIcon: Record<string, string> = {
-  calm: '🌿', anxious: '🌫️', heavy: '🌫️', mixed: '☁️', reflective: '💭',
+const fieldBadge: Record<string, string> = {
+  'Behavioral':        'bg-sage-pale text-sage',
+  'I/O & Work':        'bg-rose-pale text-rose',
+  'Group & Social':    'bg-amber-50 text-amber-700',
+  'Stress & Recovery': 'bg-blue-50 text-blue-600',
 };
 
 export default function ArticlesPage() {
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [items, setItems] = useState<HubItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [activeField, setActiveField] = useState<string | null>(null);
 
   const load = () => {
-    getUserArticles().then((data) => { setArticles(data as Article[]); setLoading(false); });
+    getHubItems().then(data => {
+      const findings = (data as HubItem[]).filter(i => i.type === 'finding');
+      setItems(findings);
+      setLoading(false);
+    });
   };
 
   useEffect(() => { load(); }, []);
 
-  const filters = Array.from(new Set(articles.map((a) => a.category_id).filter(Boolean)));
-  const filtered = activeFilter ? articles.filter((a) => a.category_id === activeFilter) : articles;
-
-  const handleSaveToHub = async (article: Article) => {
-    await saveHubItem({
-      type: 'article', title: article.title, content: article.summary,
-      source: article.source, url: article.url, field: article.category_name,
-      tags: [article.category_id, article.sentiment].filter(Boolean),
-    });
-  };
+  const fields = Array.from(new Set(items.map(i => i.field).filter(Boolean)));
+  const filtered = activeField ? items.filter(i => i.field === activeField) : items;
 
   return (
     <div className="px-5 pt-8 animate-fade-in">
-      <div className="flex items-end justify-between mb-6">
-        <div>
-          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">Your reading</p>
-          <h1 className="font-serif text-3xl text-warm-900">Articles</h1>
-        </div>
-        <button onClick={() => setShowForm(true)}
-          className="bg-sage text-white text-sm px-4 py-2 rounded-full font-medium active:scale-95 transition-transform">
-          + Add
-        </button>
+      <div className="mb-6">
+        <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">What you've saved</p>
+        <h1 className="font-serif text-3xl text-warm-900">Saved Findings</h1>
+        <p className="text-warm-400 text-xs mt-1">Articles you've bookmarked from Today's findings</p>
       </div>
 
-      {/* Category filter */}
-      {filters.length > 0 && (
+      {/* Field filter */}
+      {fields.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
-          <button onClick={() => setActiveFilter(null)}
-            className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium border transition-colors ${
-              !activeFilter ? 'bg-sage text-white border-sage' : 'bg-white text-warm-500 border-warm-100'}`}>
-            All
+          <button onClick={() => setActiveField(null)}
+            className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium border transition-colors ${!activeField ? 'bg-sage text-white border-sage' : 'bg-white text-warm-500 border-warm-100'}`}>
+            All ({items.length})
           </button>
-          {filters.map((f) => (
-            <button key={f} onClick={() => setActiveFilter(f === activeFilter ? null : f)}
+          {fields.map(f => (
+            <button key={f} onClick={() => setActiveField(f === activeField ? null : f)}
               className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium border transition-colors ${
-                activeFilter === f ? 'bg-sage text-white border-sage' : `${categoryBadge[f] ?? 'bg-white text-warm-500'} border-transparent`}`}>
-              {articles.find((a) => a.category_id === f)?.category_name ?? f}
+                activeField === f ? 'bg-sage text-white border-sage' : `${fieldBadge[f] ?? 'bg-white text-warm-500'} border-transparent`
+              }`}>
+              {f}
             </button>
           ))}
         </div>
@@ -76,63 +62,50 @@ export default function ArticlesPage() {
 
       {loading ? (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-3xl p-5 shadow-card animate-pulse h-36" />
-          ))}
+          {[1, 2, 3].map(i => <div key={i} className="bg-white rounded-3xl p-5 shadow-card animate-pulse h-32" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="font-serif text-2xl text-warm-300 mb-2">No articles yet</p>
-          <p className="text-warm-400 text-sm">Tap + Add to save your first one</p>
+        <div className="text-center py-20">
+          <p className="font-serif text-2xl text-warm-300 mb-2">Nothing saved yet</p>
+          <p className="text-warm-400 text-sm leading-relaxed">
+            Open a finding on the Today tab,<br />tap a card, then "Save to Hub"
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((article) => (
-            <div key={article.id} className="bg-white rounded-3xl p-5 shadow-card border border-warm-100">
+          {filtered.map(item => (
+            <div key={item.id} className="bg-white rounded-3xl p-5 shadow-card border border-warm-100">
               <div className="flex items-start justify-between mb-2">
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${categoryBadge[article.category_id] ?? 'bg-warm-100 text-warm-500'}`}>
-                  {article.category_name}
-                </span>
-                <div className="flex items-center gap-2">
-                  {article.sentiment && (
-                    <span className="text-sm">{sentimentIcon[article.sentiment] ?? '·'}</span>
-                  )}
-                  <button onClick={() => handleSaveToHub(article)}
-                    className="text-warm-300 hover:text-rose transition-colors" title="Save to Hub">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </button>
-                  <button onClick={async () => { await deleteUserArticle(article.id); load(); }}
-                    className="text-warm-300 hover:text-red-400 transition-colors">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" />
-                    </svg>
-                  </button>
-                </div>
+                {item.field && (
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${fieldBadge[item.field] ?? 'bg-warm-100 text-warm-500'}`}>
+                    {item.field}
+                  </span>
+                )}
+                <button onClick={async () => { await deleteHubItem(item.id); load(); }}
+                  className="text-warm-200 hover:text-red-400 transition-colors ml-auto">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" />
+                  </svg>
+                </button>
               </div>
 
-              <h3 className="font-medium text-warm-800 text-sm mb-2 leading-snug">{article.title}</h3>
-              {article.summary && (
-                <p className="text-warm-500 text-xs leading-relaxed mb-3 line-clamp-3">{article.summary}</p>
+              <p className="font-medium text-warm-800 text-sm mb-2 leading-snug">{item.title}</p>
+              {item.content && (
+                <p className="text-warm-500 text-xs leading-relaxed mb-3">{item.content}</p>
               )}
-
               <div className="flex items-center gap-2">
-                {article.source && <span className="text-xs text-warm-300">{article.source}</span>}
-                {article.url && (
-                  <a href={article.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-sage underline underline-offset-2">Read full</a>
+                {item.source && <span className="text-xs text-warm-300">{item.source}</span>}
+                {item.url && (
+                  <a href={item.url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-sage underline underline-offset-2 ml-auto">
+                    Read full ↗
+                  </a>
                 )}
-                <span className="text-xs text-warm-200 ml-auto">
-                  {new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {showForm && <ArticleForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
     </div>
   );
 }

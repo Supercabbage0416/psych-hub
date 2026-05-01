@@ -73,7 +73,7 @@ export default function HomePage() {
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-serif text-lg text-warm-900">Today's findings</h2>
-          <span className="text-xs text-warm-400">3 fields</span>
+          <span className="text-xs text-warm-400">4 fields</span>
         </div>
         <DailyFindings />
       </section>
