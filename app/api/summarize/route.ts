@@ -68,32 +68,32 @@ export async function POST(req: Request) {
         .map((a, i) => `${i + 1}. "${a.title}"\n   ${a.desc.slice(0, 400)}`)
         .join('\n\n');
 
-      const prompt = `You are selecting the single most useful psychology article for someone supporting their mental wellbeing.
+      const prompt = `You are selecting the 3 most useful psychology articles for someone supporting their mental wellbeing.
 
 Category: ${categoryLabel}
 What this category is about: ${categoryDescription}
 
 Your job:
 1. Rank the 3 most relevant articles (reject anything off-topic, medical, AI/tech, political, or about diseases/drugs).
-2. For the top-ranked article, write a clean 4-bullet summary.
+2. For EACH of the 3 ranked articles, write a 4-bullet summary and a headline.
 
-Bullets (exactly this format):
+Bullet format (use exactly these labels):
 - "What they found: ..." (core research finding, plain language, 1-2 sentences)
 - "Why this happens: ..." (the mechanism or psychology behind it, 1-2 sentences)
-- "What this means for you: ..." (personal relevance for stress/self-doubt/recovery, 1-2 sentences)
+- "What this means for you: ..." (personal relevance, 1-2 sentences)
 - "One thing to try: ..." (one small concrete action, 1 sentence)
 
-Also provide:
+Also per article:
 - headline: One punchy human sentence capturing the finding (not academic)
-- oneWord: One noun capturing the theme (e.g. "Resilience", "Rest", "Shame")
+- oneWord: One noun capturing the theme (e.g. "Resilience", "Rest", "Shame") — only needed for rank 1
 
 Articles:
 ${articleList}
 
 Respond ONLY in valid JSON with no extra text:
-{"rankings": [1, 2, 3], "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."], "oneWord": "..."}`;
+{"rankings": [1, 2, 3], "oneWord": "...", "articles": [{"rank": 1, "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."]}, {"rank": 2, "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."]}, {"rank": 3, "headline": "...", "bullets": ["What they found: ...", "Why this happens: ...", "What this means for you: ...", "One thing to try: ..."]}]}`;
 
-      const text = await callDeepSeek(prompt, 400);
+      const text = await callDeepSeek(prompt, 950);
       const parsed = extractJson(text);
       return NextResponse.json(parsed);
     }

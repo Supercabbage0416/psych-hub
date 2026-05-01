@@ -52,12 +52,26 @@ async function selectBestArticle(cat: CategoryData): Promise<Finding | null> {
     const topIdx = Math.max(0, (rankings[0] ?? 1) - 1);
     const picked = cat.items[topIdx] ?? cat.items[0];
 
+    // Per-article bullets: new format has parsed.articles array; fall back to top-level bullets
+    const articleData: Array<{ rank: number; headline?: string; bullets?: string[] }> =
+      Array.isArray(parsed.articles) ? parsed.articles : [];
+
+    const getArticleData = (rank: number) =>
+      articleData.find(a => a.rank === rank) ?? null;
+
+    const topData = getArticleData(rankings[0] ?? 1);
+    const topBullets = topData?.bullets ?? (Array.isArray(parsed.bullets) ? parsed.bullets : []);
+    const topHeadline = topData?.headline ?? parsed.headline ?? picked.title;
+
     const alternates = rankings.slice(1, 3).map(rank => {
       const item = cat.items[Math.max(0, rank - 1)];
       if (!item) return null;
+      const altData = getArticleData(rank);
       return {
         title: item.title, url: item.url,
         source: toSource(item.url), pubDate: toPubDate(item.pubDate), desc: item.desc,
+        headline: altData?.headline,
+        bullets: altData?.bullets,
       };
     }).filter((x): x is NonNullable<typeof x> => x !== null);
 
@@ -65,9 +79,8 @@ async function selectBestArticle(cat: CategoryData): Promise<Finding | null> {
       categoryId: cat.categoryId,
       field: cat.categoryLabel,
       title: picked.title,
-      headline: parsed.headline ?? picked.title,
-      bullets: Array.isArray(parsed.bullets) ? parsed.bullets : [],
-      // legacy prose fields — kept for backwards compat
+      headline: topHeadline,
+      bullets: topBullets,
       summary: picked.desc,
       source: toSource(picked.url),
       url: picked.url,
@@ -187,11 +200,11 @@ export default function DailyFindings({ categories = [], reasonMap = {} }: Props
   useEffect(() => {
     if (categories.length === 0) return; // wait for check-in
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v10_${today}_${[...categories].sort().join(',')}`;
+    const cacheKey = `findings_v11_${today}_${[...categories].sort().join(',')}`;
 
     // Clean up all older cache versions
     Object.keys(localStorage).forEach(k => {
-      if (/^findings_v[2-9]_/.test(k)) localStorage.removeItem(k);
+      if (/^findings_v([2-9]|10)_/.test(k)) localStorage.removeItem(k);
     });
 
     const cached = localStorage.getItem(cacheKey);

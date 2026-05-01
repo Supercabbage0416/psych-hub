@@ -45,5 +45,36 @@ export async function GET() {
     result.deepseek_test = 'SKIPPED (no key)';
   }
 
+  // Live test — reflect-insight analyze path
+  if (apiKey) {
+    try {
+      const insightPrompt = `You are a warm personal coach. Based on: mood="okay", journal="Had a tough week but managed to exercise twice", reflect on what's going well. Respond ONLY in valid JSON: {"mood": "...", "motivation": "...", "status": "...", "recommendation": "...", "reasoning": "..."}`;
+      const res2 = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: insightPrompt }],
+          max_tokens: 300,
+          temperature: 0.4,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        const content2 = data2.choices?.[0]?.message?.content ?? '';
+        result.reflect_insight_test = content2.includes('"mood"') ? 'PASS' : `UNEXPECTED: ${content2.slice(0, 100)}`;
+        result.reflect_insight_response = content2.slice(0, 200);
+      } else {
+        result.reflect_insight_test = `FAIL (${res2.status})`;
+      }
+    } catch (e) {
+      result.reflect_insight_test = 'FAIL (exception)';
+      result.reflect_insight_error = e instanceof Error ? e.message : String(e);
+    }
+  } else {
+    result.reflect_insight_test = 'SKIPPED (no key)';
+  }
+
   return NextResponse.json(result);
 }

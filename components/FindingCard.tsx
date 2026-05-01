@@ -20,7 +20,7 @@ export interface Finding {
   categoryId?: CategoryId;     // machine ID e.g. "stress_recovery"
   oneWord: string;
   pubDate?: string;
-  alternates?: { title: string; url: string; source: string; pubDate: string; desc: string }[];
+  alternates?: { title: string; url: string; source: string; pubDate: string; desc: string; headline?: string; bullets?: string[] }[];
 }
 
 // Category → visual style
@@ -196,42 +196,49 @@ export default function FindingCard({ finding }: { finding: Finding }) {
 
               {/* Headline */}
               <p className="font-serif text-warm-900 text-xl leading-snug font-medium mb-1">
-                {activeIdx === 0 ? displayHeadline : currentTitle}
+                {activeIdx === 0 ? displayHeadline : (finding.alternates![activeIdx - 1].headline ?? currentTitle)}
               </p>
               {activeIdx === 0 && finding.oneWord && (
                 <p className="text-warm-300 text-xs mb-5">{finding.oneWord}</p>
               )}
 
-              {/* Bullets (primary article) */}
-              {activeIdx === 0 && hasBullets ? (
-                <div className="space-y-3 mb-5">
-                  {finding.bullets!.map((bullet, i) => {
-                    const { label, text } = parseBullet(bullet);
-                    return (
-                      <div key={i} className="bg-white rounded-2xl px-4 py-3.5 border border-warm-100">
-                        <div className="flex items-start gap-3">
-                          <span className="text-base flex-shrink-0 mt-0.5">{BULLET_ICONS[i] ?? '·'}</span>
-                          <div>
-                            {label && (
-                              <p className="text-xs font-semibold text-warm-500 uppercase tracking-wide mb-1">{label}</p>
-                            )}
-                            <p className="text-warm-700 text-sm leading-relaxed">{text}</p>
+              {/* Bullets */}
+              {(() => {
+                const activeBullets = activeIdx === 0
+                  ? (hasBullets ? finding.bullets! : null)
+                  : (finding.alternates![activeIdx - 1].bullets?.length ? finding.alternates![activeIdx - 1].bullets! : null);
+                if (activeBullets) {
+                  return (
+                    <div className="space-y-3 mb-5">
+                      {activeBullets.map((bullet, i) => {
+                        const { label, text } = parseBullet(bullet);
+                        return (
+                          <div key={i} className="bg-white rounded-2xl px-4 py-3.5 border border-warm-100">
+                            <div className="flex items-start gap-3">
+                              <span className="text-base flex-shrink-0 mt-0.5">{BULLET_ICONS[i] ?? '·'}</span>
+                              <div>
+                                {label && (
+                                  <p className="text-xs font-semibold text-warm-500 uppercase tracking-wide mb-1">{label}</p>
+                                )}
+                                <p className="text-warm-700 text-sm leading-relaxed">{text}</p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                // Legacy / alternate article
-                <div className="bg-white rounded-2xl p-4 mb-5 border border-warm-100">
-                  <p className="text-warm-700 text-sm leading-7">
-                    {activeIdx === 0
-                      ? (finding.finding ? [finding.finding, finding.context, finding.population, finding.implication].filter(Boolean).join('\n\n') : finding.summary)
-                      : (finding.alternates![activeIdx - 1].desc || 'Tap "Full article" to read more.')}
-                  </p>
-                </div>
-              )}
+                        );
+                      })}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="bg-white rounded-2xl p-4 mb-5 border border-warm-100">
+                    <p className="text-warm-700 text-sm leading-7">
+                      {activeIdx === 0
+                        ? (finding.finding ? [finding.finding, finding.context, finding.population, finding.implication].filter(Boolean).join('\n\n') : finding.summary)
+                        : (finding.alternates![activeIdx - 1].desc || 'Tap "Full article" to read more.')}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Source row */}
               <div className="flex items-center gap-2 mb-5">
