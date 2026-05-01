@@ -72,13 +72,21 @@ async function selectBestArticle(cat: CategoryData): Promise<Finding | null> {
 
 function fallback(cat: CategoryData): Finding {
   const item = cat.items[0] ?? { title: 'No article found', desc: '', url: '', pubDate: '' };
+  const desc = item.desc || '';
+  // Generate minimal bullets from description so card never renders empty
+  const bullets: string[] = desc.length > 30
+    ? [
+        `What they found: ${desc.slice(0, 200).replace(/\s+\S+$/, '')}...`,
+        `What this means for you: Research in ${cat.categoryLabel.toLowerCase()} can help understand your patterns and build practical tools.`,
+      ]
+    : [];
   return {
     categoryId: cat.categoryId,
     field: cat.categoryLabel,
     title: item.title,
     headline: item.title,
-    bullets: [],
-    summary: item.desc || 'Tap "Full article" to read more.',
+    bullets,
+    summary: desc || 'Tap "Full article" to read more.',
     source: toSource(item.url),
     url: item.url,
     oneWord: cat.categoryLabel.split(' ')[0],
@@ -168,11 +176,11 @@ export default function DailyFindings({ categories = [], reasonMap = {} }: Props
   useEffect(() => {
     if (categories.length === 0) return; // wait for check-in
     const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `findings_v6_${today}_${[...categories].sort().join(',')}`;
+    const cacheKey = `findings_v7_${today}_${[...categories].sort().join(',')}`;
 
     // Clean up all older cache versions
     Object.keys(localStorage).forEach(k => {
-      if (/^findings_v[2-5]_/.test(k)) localStorage.removeItem(k);
+      if (/^findings_v[2-6]_/.test(k)) localStorage.removeItem(k);
     });
 
     const cached = localStorage.getItem(cacheKey);

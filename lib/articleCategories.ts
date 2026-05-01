@@ -33,6 +33,9 @@ const GLOBAL_BLOCK = [
   'robot', 'algorithm', 'deep learning', 'neural network',
   'climate change', 'election', 'stock market', 'cryptocurrency',
   'nuclear', 'war crimes',
+  'gut', 'digestive', 'gastrointestinal', 'intestinal', 'bowel', 'ibs',
+  'microbiome', 'genome', 'genetic', 'gene expression', 'dna', 'epigenetic',
+  'neurological disorder', 'dementia', 'parkinson', 'schizophrenia',
 ];
 
 export const CATEGORIES: ArticleCategory[] = [
@@ -44,7 +47,7 @@ export const CATEGORIES: ArticleCategory[] = [
       'https://behavioralscientist.org/feed/',
       'https://bpsresearchdigest.com/feed/',
       'https://positivepsychology.com/feed/',
-      'https://www.neurosciencenews.com/feed/',
+      'https://greatergood.berkeley.edu/feeds/gg_articles.xml',
     ],
     mustContain: [
       'habit', 'action', 'activat', 'behavior', 'motivat', 'engag',

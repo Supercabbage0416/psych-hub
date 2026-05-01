@@ -42,18 +42,27 @@ export default function ReflectionInsight() {
   useEffect(() => {
     getLatestInsight().then(data => {
       if (data) {
-        setSavedInsight(data as SavedInsight);
+        const saved = data as SavedInsight;
+        setSavedInsight(saved);
         setInsight({
-          mood: (data as SavedInsight).mood,
-          motivation: (data as SavedInsight).motivation,
-          status: (data as SavedInsight).status,
-          recommendation: (data as SavedInsight).recommendation,
-          reasoning: (data as SavedInsight).reasoning,
+          mood: saved.mood,
+          motivation: saved.motivation,
+          status: saved.status,
+          recommendation: saved.recommendation,
+          reasoning: saved.reasoning,
         });
-        setThread((data as SavedInsight).thread ?? []);
-        setGeneratedAt((data as SavedInsight).created_at?.slice(0, 10));
+        setThread(saved.thread ?? []);
+        setGeneratedAt(saved.created_at?.slice(0, 10));
+
+        // Auto-refresh if last insight is more than 3 days old
+        const daysSince = (Date.now() - new Date(saved.created_at).getTime()) / 86400000;
+        if (daysSince > 3) generateInsight();
+      } else {
+        // No insight yet — auto-generate
+        generateInsight();
       }
-    }).catch(() => {});
+    }).catch(() => { generateInsight(); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -69,6 +78,18 @@ export default function ReflectionInsight() {
         getJournalEntries(),
         getReflections(),
       ]);
+
+      // Pre-flight data checks
+      if ((moods as unknown[]).length < 3 && (journals as unknown[]).length < 2) {
+        setError('Not enough data yet. Add at least 3 mood check-ins or 2 journal entries to get a weekly read.');
+        setLoading(false);
+        return;
+      }
+      if ((moods as unknown[]).length < 3) {
+        setError('Add at least 3 mood check-ins this week so the AI has enough signal to work with.');
+        setLoading(false);
+        return;
+      }
 
       const recoveryState = loadState();
       const stage = getStageLabel(recoveryState.currentStage);
@@ -89,7 +110,16 @@ export default function ReflectionInsight() {
         }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errText = await res.text();
+        if (res.status === 402 || errText.includes('balance') || errText.includes('credit')) {
+          throw new Error('AI service temporarily unavailable. Try again later.');
+        }
+        if (res.status >= 500) {
+          throw new Error('Server error. Try again in a moment.');
+        }
+        throw new Error(`Request failed (${res.status})`);
+      }
       const data: Insight = await res.json();
 
       setInsight(data);
@@ -108,7 +138,12 @@ export default function ReflectionInsight() {
       if (saved) setSavedInsight(saved as SavedInsight);
 
     } catch (e) {
-      setError('Could not generate insight. Check your connection and try again.');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch')) {
+        setError('Connection failed. Check your internet and try again.');
+      } else {
+        setError(msg);
+      }
       console.error(e);
     } finally {
       setLoading(false);
@@ -249,19 +284,16 @@ export default function ReflectionInsight() {
         </div>
       )}
 
-      {/* Generate button */}
-      {!insight && !loading && (
+      {/* Error state (shown when not loading and no insight) */}
+      {!insight && !loading && error && (
         <div className="bg-white rounded-3xl p-5 shadow-card border border-warm-100">
-          <p className="text-sm text-warm-600 leading-relaxed mb-4">
-            AI will read your recent moods, journal entries, reflections, and recovery data to understand where you are — then suggest a specific plan for this week.
-          </p>
+          <p className="text-sm text-warm-500 leading-relaxed mb-3">{error}</p>
           <button
             onClick={generateInsight}
-            className="w-full py-3.5 rounded-2xl bg-sage text-white text-sm font-medium active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-2xl bg-sage text-white text-sm font-medium active:scale-[0.98] transition-transform"
           >
-            Generate my weekly insight
+            Try again
           </button>
-          {error && <p className="text-xs text-red-400 mt-3 text-center">{error}</p>}
         </div>
       )}
 
@@ -276,12 +308,15 @@ export default function ReflectionInsight() {
 
       {/* Regenerate */}
       {insight && !loading && (
-        <button
-          onClick={generateInsight}
-          className="w-full py-3 rounded-2xl border border-warm-100 bg-white text-xs text-warm-400"
-        >
-          Regenerate with latest data
-        </button>
+        <div>
+          {error && <p className="text-xs text-red-400 mb-2 text-center px-1">{error}</p>}
+          <button
+            onClick={generateInsight}
+            className="w-full py-3 rounded-2xl border border-warm-100 bg-white text-xs text-warm-400"
+          >
+            Refresh with latest data
+          </button>
+        </div>
       )}
     </div>
   );

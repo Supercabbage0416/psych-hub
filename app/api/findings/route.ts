@@ -118,17 +118,25 @@ export async function GET(req: Request) {
 
   const categoryIds = requestedIds.length > 0 ? requestedIds : DEFAULT_CATEGORIES;
 
-  const results = await Promise.all(
-    categoryIds.map(async (id) => {
-      const category = getCategoryById(id);
-      return {
-        categoryId: id,
-        categoryLabel: category.label,
-        categoryDescription: category.description,
-        items: await fetchCategoryItems(id),
-      };
-    })
-  );
+  // Deduplicate articles across categories — once a URL is used, exclude it from later categories
+  const usedUrls = new Set<string>();
+  const results: { categoryId: CategoryId; categoryLabel: string; categoryDescription: string; items: { title: string; desc: string; url: string; pubDate: string }[] }[] = [];
+
+  for (const id of categoryIds) {
+    const category = getCategoryById(id);
+    const items = await fetchCategoryItems(id);
+    const deduped = items.filter(item => {
+      if (!item.url || usedUrls.has(item.url)) return false;
+      usedUrls.add(item.url);
+      return true;
+    });
+    results.push({
+      categoryId: id,
+      categoryLabel: category.label,
+      categoryDescription: category.description,
+      items: deduped,
+    });
+  }
 
   return NextResponse.json(results, {
     headers: { 'Cache-Control': 's-maxage=1800, stale-while-revalidate=3600' },
