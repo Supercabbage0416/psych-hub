@@ -34,9 +34,20 @@ const SECTIONS = [
   { key: 'implication' as const,label: 'Implication' },
 ];
 
+type HubCollection = 'explains_me' | 'helps_recover' | 'meaningful' | 'revisit';
+const HUB_COLLECTIONS: { id: HubCollection; label: string; icon: string }[] = [
+  { id: 'explains_me', label: 'Explains me', icon: '🪞' },
+  { id: 'helps_recover', label: 'Helps me recover', icon: '🌱' },
+  { id: 'meaningful', label: 'Still meaningful', icon: '✨' },
+  { id: 'revisit', label: 'Want to revisit', icon: '🔖' },
+];
+
 export default function FindingCard({ finding }: { finding: Finding }) {
   const [expanded, setExpanded] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showHubPrompt, setShowHubPrompt] = useState(false);
+  const [hubCollection, setHubCollection] = useState<HubCollection | null>(null);
+  const [hubReason, setHubReason] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const style = fieldStyles[finding.field] ?? fallbackStyle;
 
@@ -52,7 +63,11 @@ export default function FindingCard({ finding }: { finding: Finding }) {
 
   const aiPrompt = `I just read a psychology finding:\n\nTitle: "${finding.title}"\nField: ${finding.field}\n\nFinding: ${finding.finding ?? finding.summary}\nImplication: ${finding.implication ?? ''}\n\nHelp me connect this to my daily life. What patterns might it point to? How could I apply this today?`;
 
-  const handleSave = async () => {
+  const handleSaveInitiate = () => {
+    setShowHubPrompt(true);
+  };
+
+  const handleSaveConfirm = async () => {
     await saveHubItem({
       type: 'finding',
       title: finding.title,
@@ -61,7 +76,10 @@ export default function FindingCard({ finding }: { finding: Finding }) {
       url: finding.url,
       field: finding.field,
       tags: [finding.field, finding.oneWord.toLowerCase()],
+      collection: hubCollection ?? undefined,
+      save_reason: hubReason || undefined,
     });
+    setShowHubPrompt(false);
     setSaved(true);
   };
 
@@ -206,7 +224,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
                 <div className="flex items-center justify-between pt-4 border-t border-warm-100 pb-2">
                   <ReflectWithAI context={aiPrompt} label="Reflect with AI" />
                   <button
-                    onClick={handleSave}
+                    onClick={handleSaveInitiate}
                     disabled={saved}
                     className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-full font-medium transition-all active:scale-95 ${
                       saved ? 'bg-sage-pale text-sage' : 'bg-warm-100 text-warm-600'
@@ -219,6 +237,52 @@ export default function FindingCard({ finding }: { finding: Finding }) {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hub save prompt */}
+      {showHubPrompt && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end"
+          style={{ background: 'rgba(61,53,48,0.4)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setShowHubPrompt(false)}>
+          <div className="bg-cream rounded-t-4xl px-6 pt-6 pb-10"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto mb-5" />
+            <p className="font-serif text-xl text-warm-900 mb-1">What made this useful?</p>
+            <p className="text-warm-500 text-xs mb-4 leading-snug line-clamp-2">"{finding.title}"</p>
+
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {HUB_COLLECTIONS.map(c => (
+                <button key={c.id} onClick={() => setHubCollection(c.id)}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-2xl border text-left transition-all ${
+                    hubCollection === c.id ? 'bg-white border-sage shadow-card' : 'bg-white border-warm-100'
+                  }`}>
+                  <span className="text-base">{c.icon}</span>
+                  <span className="text-xs font-medium text-warm-700">{c.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={hubReason}
+              onChange={e => setHubReason(e.target.value)}
+              placeholder="Optional — what did this remind you of, or why does it matter right now?"
+              rows={2}
+              className="w-full bg-white border border-warm-100 rounded-2xl px-3 py-2.5 text-sm text-warm-800 placeholder-warm-300 resize-none focus:outline-none focus:border-sage mb-4"
+            />
+
+            <div className="flex gap-3">
+              <button onClick={() => { setShowHubPrompt(false); handleSaveConfirm(); }}
+                className="flex-1 py-3 rounded-2xl border border-warm-200 text-warm-500 text-sm">
+                Skip — just save
+              </button>
+              <button onClick={handleSaveConfirm} disabled={!hubCollection}
+                className="flex-1 py-3 rounded-2xl bg-sage text-white text-sm font-medium disabled:opacity-40">
+                Save to Hub
+              </button>
             </div>
           </div>
         </div>

@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import MoodCapture from '@/components/MoodCapture';
 import DailyFindings from '@/components/DailyFindings';
-import WeeklyNudge from '@/components/WeeklyNudge';
 import GrowthMarkers from '@/components/GrowthMarkers';
 import ThoughtCapture from '@/components/ThoughtCapture';
-import { getTodayMood } from '@/lib/supabase';
+import DailyCheckIn from '@/components/DailyCheckIn';
+import CheckInSummary from '@/components/CheckInSummary';
+import RecoveryNudgeCard from '@/components/RecoveryNudgeCard';
+import { getTodayCheckIn } from '@/lib/supabase';
+import { getFieldRecommendations } from '@/lib/checkin';
+import type { PartialCheckIn, FieldRecommendation } from '@/lib/checkin';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -19,23 +22,46 @@ function formatDate() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+function RecommendationContext({ recs }: { recs: FieldRecommendation[] }) {
+  if (recs.length === 0) return null;
+  const top = recs[0];
+  return (
+    <p className="text-xs text-warm-400 leading-snug mb-3">
+      Based on your check-in — <span className="text-warm-600">{top.reason.toLowerCase()}</span>
+    </p>
+  );
+}
+
 export default function HomePage() {
-  const [mood, setMood] = useState<string | null>(null);
-  const [showMoodCapture, setShowMoodCapture] = useState(false);
+  const [checkIn, setCheckIn] = useState<PartialCheckIn | null>(null);
+  const [showCheckIn, setShowCheckIn] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [recs, setRecs] = useState<FieldRecommendation[]>([]);
 
   useEffect(() => {
-    getTodayMood().then((m) => {
-      setMood(m);
-      if (!m) setShowMoodCapture(true);
+    getTodayCheckIn().then((data) => {
+      if (data) {
+        const ci: PartialCheckIn = {
+          mood: data.mood,
+          energy: data.energy,
+          stress: data.stress,
+          selfWorth: data.self_worth,
+          socialSafety: data.social_safety,
+        };
+        setCheckIn(ci);
+        setRecs(getFieldRecommendations(ci));
+      } else {
+        setShowCheckIn(true);
+      }
       setLoaded(true);
     });
   }, []);
 
-  const handleMoodSet = (m: string) => {
-    setMood(m);
-    setShowMoodCapture(false);
+  const handleCheckInComplete = (ci: PartialCheckIn) => {
+    setCheckIn(ci);
+    setRecs(getFieldRecommendations(ci));
+    setShowCheckIn(false);
   };
 
   if (!loaded) {
@@ -47,35 +73,43 @@ export default function HomePage() {
   }
 
   return (
-    <div className="px-5 pt-8 animate-fade-in">
+    <div className="px-5 pt-8 pb-28 animate-fade-in">
       {/* Header */}
-      <div className="mb-7">
+      <div className="mb-6">
         <p className="text-warm-400 text-sm mb-0.5">{formatDate()}</p>
         <h1 className="font-serif text-3xl text-warm-900">{getGreeting()}</h1>
-        {mood && (
-          <button
-            onClick={() => setShowMoodCapture(true)}
-            className="mt-2 inline-flex items-center gap-1.5 text-sm text-warm-500 bg-white px-3 py-1.5 rounded-full shadow-card border border-warm-100 hover:border-sage transition-colors"
-          >
-            <span className="capitalize">{mood}</span>
-            <span className="text-warm-300">·</span>
-            <span className="text-xs text-warm-400">tap to update</span>
-          </button>
-        )}
       </div>
 
-      {/* Today's Nudge */}
-      <section className="mb-6">
-        <WeeklyNudge mood={mood} />
+      {/* Section 1: How am I today? */}
+      <section className="mb-5">
+        <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">How am I today?</p>
+        {checkIn ? (
+          <CheckInSummary checkIn={checkIn} onEdit={() => setShowCheckIn(true)} />
+        ) : (
+          <button onClick={() => setShowCheckIn(true)}
+            className="w-full bg-white rounded-3xl p-5 shadow-card border border-warm-100 text-left">
+            <p className="text-warm-400 text-sm mb-1">You haven't checked in yet</p>
+            <p className="text-sage text-sm font-medium">Tap to start daily check-in →</p>
+          </button>
+        )}
       </section>
 
-      {/* Today's Findings */}
-      <section className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-serif text-lg text-warm-900">Today's findings</h2>
-          <span className="text-xs text-warm-400">4 fields</span>
+      {/* Section 2: One small thing I can do */}
+      <section className="mb-5">
+        <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">One small thing</p>
+        <RecoveryNudgeCard />
+      </section>
+
+      {/* Section 3: What can help me understand myself today? */}
+      <section className="mb-5">
+        <div className="flex items-baseline justify-between mb-2">
+          <p className="text-xs text-warm-400 uppercase tracking-wide">For you today</p>
+          {recs.length > 0 && (
+            <span className="text-xs text-warm-300">based on how you feel</span>
+          )}
         </div>
-        <DailyFindings />
+        {checkIn && <RecommendationContext recs={recs} />}
+        <DailyFindings recommendedFields={recs.map(r => r.field)} />
       </section>
 
       {/* Growth markers */}
@@ -83,10 +117,10 @@ export default function HomePage() {
         <GrowthMarkers />
       </section>
 
-      {/* Floating capture button */}
+      {/* Floating journal button */}
       <button
         onClick={() => setShowJournal(true)}
-        className="fixed bottom-24 right-5 w-14 h-14 bg-sage rounded-full shadow-soft flex items-center justify-center active:scale-95 transition-transform z-40"
+        className="fixed right-5 w-14 h-14 bg-sage rounded-full shadow-soft flex items-center justify-center active:scale-95 transition-transform z-40"
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
         aria-label="Capture thought"
       >
@@ -97,7 +131,12 @@ export default function HomePage() {
       </button>
 
       {/* Modals */}
-      {showMoodCapture && <MoodCapture onComplete={handleMoodSet} />}
+      {showCheckIn && (
+        <DailyCheckIn
+          onComplete={handleCheckInComplete}
+          onClose={() => setShowCheckIn(false)}
+        />
+      )}
       {showJournal && (
         <ThoughtCapture
           onClose={() => setShowJournal(false)}

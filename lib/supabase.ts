@@ -53,9 +53,14 @@ export async function getMoodHistory(days = 30) {
   return data ?? [];
 }
 
-export async function saveJournalEntry(content: string, tags: string[], prompt: string) {
+export async function saveJournalEntry(
+  content: string,
+  tags: string[],
+  prompt: string,
+  entry_type?: string,
+) {
   const deviceId = getDeviceId();
-  return supabase.from('journal_entries').insert({ device_id: deviceId, content, tags, prompt });
+  return supabase.from('journal_entries').insert({ device_id: deviceId, content, tags, prompt, entry_type });
 }
 
 export async function getJournalEntries() {
@@ -159,6 +164,10 @@ export async function saveHubItem(item: {
   type: 'finding' | 'article' | 'note';
   title: string; content?: string; source?: string; url?: string;
   field?: string; tags?: string[];
+  collection?: 'explains_me' | 'helps_recover' | 'meaningful' | 'revisit';
+  save_reason?: string;
+  stage_at_save?: string;
+  mood_at_save?: string;
 }) {
   const deviceId = getDeviceId();
   return supabase.from('hub_items').insert({ device_id: deviceId, ...item });
@@ -197,6 +206,36 @@ export async function getLatestInsight() {
     .select('*')
     .eq('device_id', deviceId)
     .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data ?? null;
+}
+
+// ── Daily Check-In ─────────────────────────────────────────────────────────
+
+export async function saveCheckIn(checkIn: {
+  mood: string;
+  energy: number;
+  stress: number;
+  self_worth: number;
+  social_safety: number;
+}) {
+  const deviceId = getDeviceId();
+  const today = new Date().toISOString().split('T')[0];
+  return supabase.from('daily_checkins').upsert(
+    { device_id: deviceId, date: today, ...checkIn },
+    { onConflict: 'device_id,date' }
+  );
+}
+
+export async function getTodayCheckIn() {
+  const deviceId = getDeviceId();
+  const today = new Date().toISOString().split('T')[0];
+  const { data } = await supabase
+    .from('daily_checkins')
+    .select('*')
+    .eq('device_id', deviceId)
+    .eq('date', today)
     .limit(1)
     .single();
   return data ?? null;

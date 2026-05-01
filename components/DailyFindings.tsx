@@ -89,7 +89,19 @@ const HARDCODED_FALLBACKS: Finding[] = [
   { field: 'Stress & Recovery', title: 'Deliberate rest reduces cortisol more effectively than passive distraction', summary: 'Studies show that intentional rest — doing nothing with purpose — lowers cortisol levels more reliably than distracting yourself with screens or entertainment. The brain needs genuine downtime to consolidate experiences and restore cognitive resources. Distraction delays recovery; stillness accelerates it. Even 10 minutes of sitting quietly, without agenda, produces measurable physiological change. Rest is not a reward for finishing work — it is part of how the brain and body actually recover.', source: 'greatergood.berkeley.edu', url: 'https://greatergood.berkeley.edu', oneWord: 'Rest', pubDate: '' },
 ];
 
-export default function DailyFindings() {
+// Maps recommendation field IDs to API field names
+const FIELD_MAP: Record<string, string> = {
+  behavioral: 'Behavioral',
+  io_work: 'I/O & Work',
+  group_social: 'Group & Social',
+  stress: 'Stress & Recovery',
+};
+
+interface Props {
+  recommendedFields?: string[];
+}
+
+export default function DailyFindings({ recommendedFields = [] }: Props) {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>('Loading today\'s findings...');
@@ -162,9 +174,25 @@ export default function DailyFindings() {
     );
   }
 
+  // Sort so recommended fields appear first
+  const recommendedApiFields = recommendedFields.map(id => FIELD_MAP[id]).filter(Boolean);
+  const sorted = recommendedApiFields.length > 0
+    ? [
+        ...findings.filter(f => recommendedApiFields.includes(f.field)),
+        ...findings.filter(f => !recommendedApiFields.includes(f.field)),
+      ]
+    : findings;
+
   return (
     <div className="space-y-4">
-      {findings.map((f, i) => <FindingCard key={i} finding={f} />)}
+      {sorted.map((f, i) => (
+        <div key={i}>
+          {recommendedApiFields.includes(f.field) && (
+            <p className="text-xs text-sage font-medium mb-1.5 ml-1">↑ Recommended for today</p>
+          )}
+          <FindingCard finding={f} />
+        </div>
+      ))}
     </div>
   );
 }
