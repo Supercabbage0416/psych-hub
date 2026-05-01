@@ -17,11 +17,13 @@ const tabs = [
     ),
   },
   {
-    href: '/articles',
-    label: 'Articles',
+    href: '/recover',
+    label: 'Recover',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#7A9A6E' : '#9B8E88'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10" />
+        <polyline points="16 12 12 8 8 12" />
+        <line x1="12" y1="8" x2="12" y2="16" />
       </svg>
     ),
   },
