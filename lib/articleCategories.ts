@@ -268,17 +268,26 @@ export function getCategoriesForCheckIn(checkIn: PartialCheckIn): CategoryId[] {
     weighted.push({ id: 'behavioral_activation', priority: 8 });
     weighted.push({ id: 'meaning_identity', priority: 6 });
   }
-  if (mood === 'scattered') {
+  if (mood === 'scattered' || mood === 'restless') {
     weighted.push({ id: 'emotional_regulation', priority: 9 });
     weighted.push({ id: 'autonomy_uncertainty', priority: 6 });
   }
-  if (mood === 'calm' || mood === 'alive') {
+  if (mood === 'calm' || mood === 'alive' || mood === 'energized') {
     weighted.push({ id: 'meaning_identity', priority: 6 });
     weighted.push({ id: 'autonomy_uncertainty', priority: 5 });
   }
-  if (mood === 'okay') {
+  if (mood === 'okay' || mood === 'steady') {
     weighted.push({ id: 'behavioral_activation', priority: 4 });
     weighted.push({ id: 'meaning_identity', priority: 4 });
+  }
+  if (mood === 'anxious') {
+    weighted.push({ id: 'stress_recovery', priority: 10 });
+    weighted.push({ id: 'emotional_regulation', priority: 8 });
+    weighted.push({ id: 'social_anxiety', priority: 6 });
+  }
+  if (mood === 'tender' || mood === 'soft') {
+    weighted.push({ id: 'meaning_identity', priority: 7 });
+    weighted.push({ id: 'relationship_belonging', priority: 8 });
   }
 
   // Deduplicate by id, keep highest priority, sort, take top 3

@@ -1,7 +1,10 @@
 // Daily check-in types and article recommendation logic.
 // All 5 dimensions are optional after mood so the user can stop early.
 
-export type MoodValue = 'calm' | 'okay' | 'alive' | 'heavy' | 'scattered' | 'numb';
+export type MoodValue =
+  | 'calm' | 'okay' | 'alive' | 'heavy' | 'scattered' | 'numb'
+  | 'anxious' | 'tender'                              // night orbs
+  | 'steady' | 'restless' | 'energized' | 'soft';    // day orbs
 export type ScaleValue = 1 | 2 | 3 | 4 | 5;
 
 export interface DailyCheckIn {
@@ -156,6 +159,9 @@ export function checkInSummaryLine(checkIn: PartialCheckIn): string {
   if (stress >= 4) return 'Running hot today. That is worth noticing.';
   if (energy <= 2) return 'Low energy today. Small still counts.';
   if (mood === 'heavy' || mood === 'numb') return 'A heavy day. You still showed up.';
-  if (mood === 'alive' || mood === 'calm') return 'Feeling relatively steady today.';
+  if (mood === 'alive' || mood === 'calm' || mood === 'energized') return 'Feeling relatively steady today.';
+  if (mood === 'anxious' || mood === 'restless') return 'Some tension today. Worth noticing.';
+  if (mood === 'tender' || mood === 'soft') return 'Something tender today. That is okay.';
+  if (mood === 'steady') return 'Grounded and present.';
   return 'Checking in. That matters.';
 }

@@ -1,29 +1,70 @@
 /* ════════════════════════════════════════════════════════════
-   Psych Hub — Calm Blue v4 design tokens + Cozy Room scene
+   Psych Hub — Calm Blue v7 design tokens + Day/Night scenes
    ════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg:          #07101F;
-  --bg-deep:     #04080F;
-  --surface:     #0F1828;
-  --surface-2:   #142136;
-  --line:        rgba(149,176,217,0.10);
-  --line-strong: rgba(149,176,217,0.18);
-  --text:        #E6E1D7;
-  --text-sub:    #B8B0A2;
-  --text-muted:  #8A8276;
-  --text-dim:    #5C5750;
-  --sage:        #95B0D9;
-  --sage-deep:   #6E8AB8;
-  --sage-glow:   rgba(149,176,217,0.20);
-  --ember:       #E89B6C;
-  --ember-glow:  rgba(232,155,108,0.32);
-  --rose:        #C99CA0;
-  --amber:       #D4B881;
   --ease-soft:   cubic-bezier(0.4, 0.1, 0.2, 1);
   --r-sm: 12px; --r-md: 18px; --r-lg: 24px; --r-xl: 28px;
   --font-sans:  'Nunito', system-ui, sans-serif;
   --font-serif: 'Lora', Georgia, serif;
+}
+
+/* NIGHT MODE (default — 6pm to 6am) */
+.mode-night {
+  --bg:            #07101F;
+  --bg-grad:       linear-gradient(180deg, #02050C 0%, #060D1C 40%, #0A1525 80%, #0E1A2E 100%);
+  --bg-deep:       #04080F;
+  --surface:       #0F1828;
+  --surface-2:     #142136;
+  --surface-soft:  rgba(149,176,217,0.04);
+  --surface-mid:   rgba(149,176,217,0.08);
+  --line:          rgba(149,176,217,0.10);
+  --line-strong:   rgba(149,176,217,0.18);
+  --text:          #E6E1D7;
+  --text-sub:      #B8B0A2;
+  --text-muted:    #8A8276;
+  --text-dim:      #5C5750;
+  --accent:        #95B0D9;
+  --accent-glow:   rgba(149,176,217,0.20);
+  --sage:          #95B0D9;
+  --sage-deep:     #6E8AB8;
+  --sage-glow:     rgba(149,176,217,0.20);
+  --warm:          #E89B6C;
+  --warm-bright:   #FFD27A;
+  --warm-deep:     #C76B4A;
+  --ember:         #E89B6C;
+  --ember-glow:    rgba(232,155,108,0.32);
+  --rose:          #C99CA0;
+  --amber:         #D4B881;
+}
+
+/* DAY MODE (6am to 6pm — cool, bright, airy) */
+.mode-day {
+  --bg:            #F0F5FA;
+  --bg-grad:       linear-gradient(180deg, #FFFFFF 0%, #F4F7FB 50%, #E8EEF5 100%);
+  --bg-deep:       #E0E8F0;
+  --surface:       #FFFFFF;
+  --surface-2:     #F4F7FB;
+  --surface-soft:  rgba(90,127,181,0.04);
+  --surface-mid:   rgba(90,127,181,0.08);
+  --line:          rgba(60,90,130,0.10);
+  --line-strong:   rgba(60,90,130,0.20);
+  --text:          #1A2330;
+  --text-sub:      #4A5568;
+  --text-muted:    #6B7785;
+  --text-dim:      #94A0B0;
+  --accent:        #4A6FA5;
+  --accent-glow:   rgba(74,111,165,0.18);
+  --sage:          #4A6FA5;
+  --sage-deep:     #3D5A82;
+  --sage-glow:     rgba(74,111,165,0.18);
+  --warm:          #5A7FAF;
+  --warm-bright:   #8FA9CC;
+  --warm-deep:     #3D5A82;
+  --ember:         #5A7FAF;
+  --ember-glow:    rgba(90,127,175,0.25);
+  --rose:          #A0B8D0;
+  --amber:         #8FA9CC;
 }
 
 /* ── Cozy Room Scene ──────────────────────────────────────── */
@@ -367,10 +408,194 @@ body[data-ritual="burning"] .cozy-room__flame {
   font-style: italic;
 }
 
+/* ── Day mode — hide night elements ──────────────────────────── */
+.mode-day .cozy-room {
+  background:
+    radial-gradient(ellipse 300px 200px at 80% 90%, rgba(90,127,175,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 200px 200px at 14% 28%, rgba(180,210,240,0.10) 0%, transparent 75%),
+    radial-gradient(circle 120px at 88% 14%, rgba(255,255,255,0.40) 0%, transparent 70%);
+}
+.mode-day .cozy-room__window {
+  background: linear-gradient(180deg, rgba(180,210,255,0.25) 0%, rgba(180,210,255,0.08) 100%);
+  border-color: rgba(90,127,175,0.18);
+  box-shadow: inset 0 0 30px rgba(180,210,255,0.15), 0 0 25px rgba(180,210,255,0.10);
+}
+.mode-day .cozy-room__window::after {
+  background:
+    linear-gradient(90deg, transparent 49%, rgba(90,127,175,0.20) 49.5%, rgba(90,127,175,0.20) 50.5%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(90,127,175,0.20) 49.5%, rgba(90,127,175,0.20) 50.5%, transparent 51%);
+}
+.mode-day .cozy-room__moon,
+.mode-day .cozy-room__stars { display: none; }
+.mode-day .cozy-room__fireplace,
+.mode-day .cozy-room__embers,
+.mode-day .cozy-room__lamp { display: none; }
+
+/* Day: soft sun circle in window */
+.mode-day .cozy-room__window::before {
+  content: '';
+  position: absolute;
+  top: 22px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 36px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,220,120,0.9) 0%, rgba(255,200,80,0.55) 50%, transparent 100%);
+  box-shadow: 0 0 20px rgba(255,210,100,0.45), 0 0 50px rgba(255,200,80,0.25);
+}
+
+/* Day: cloud elements */
+.cozy-room__cloud {
+  position: absolute;
+  background: rgba(255,255,255,0.72);
+  border-radius: 50px;
+  filter: blur(2px);
+  animation: cozy-cloud-drift 28s ease-in-out infinite;
+  pointer-events: none;
+}
+.cozy-room__cloud:nth-child(1) { width: 60px; height: 18px; top: 68px; right: 48px; }
+.cozy-room__cloud:nth-child(2) { width: 40px; height: 12px; top: 80px; right: 28px; animation-delay: -8s; }
+.mode-night .cozy-room__cloud { display: none; }
+@keyframes cozy-cloud-drift {
+  0%,100% { transform: translateX(0); }
+  50%     { transform: translateX(8px); }
+}
+
+/* Day: coffee mug scene (replaces fireplace) */
+.cozy-room__coffee {
+  position: absolute; bottom: 75px; right: 18px;
+  width: 70px; height: 70px; z-index: 1; pointer-events: none;
+}
+.cozy-room__mug {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  width: 46px; height: 42px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #EEF3FA 100%);
+  border-radius: 4px 4px 12px 12px;
+  box-shadow: inset -5px 0 10px rgba(60,90,130,0.10), 0 4px 8px rgba(60,90,130,0.12);
+  overflow: hidden;
+}
+.cozy-room__mug-liquid {
+  position: absolute; top: 6px; left: 5px; right: 5px; height: 8px;
+  background: radial-gradient(ellipse at 35% 35%, #5A3A22 0%, #2A180C 70%);
+  border-radius: 50%;
+}
+.cozy-room__mug-handle {
+  position: absolute; bottom: 20px; right: 8px;
+  width: 14px; height: 20px;
+  border: 3.5px solid #FFFFFF;
+  border-radius: 0 50% 50% 0;
+  border-left: none;
+  box-shadow: 1px 0 3px rgba(60,90,130,0.10);
+}
+.cozy-room__mug-saucer {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 70px; height: 10px;
+  background: radial-gradient(ellipse at center, #FFFFFF 0%, #D8E4F0 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(60,90,130,0.10);
+}
+.cozy-room__steam {
+  position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 28px; pointer-events: none;
+}
+.cozy-room__steam-wisp {
+  position: absolute; bottom: 0;
+  width: 4px; height: 22px;
+  background: linear-gradient(180deg, transparent, rgba(180,200,230,0.6), rgba(180,200,230,0.3));
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: cozy-steam-rise 3s ease-in-out infinite;
+}
+.cozy-room__steam-wisp:nth-child(1) { left: 5px;  animation-delay: 0s; }
+.cozy-room__steam-wisp:nth-child(2) { left: 14px; animation-delay: 0.7s; }
+.cozy-room__steam-wisp:nth-child(3) { left: 23px; animation-delay: 1.4s; }
+@keyframes cozy-steam-rise {
+  0%   { transform: translateY(0) scaleY(0.5); opacity: 0; }
+  20%  { opacity: 0.7; }
+  60%  { transform: translateY(-16px) translateX(2px) scaleY(1); opacity: 0.4; }
+  100% { transform: translateY(-28px) translateX(-2px) scaleY(0.7); opacity: 0; }
+}
+.mode-night .cozy-room__coffee { display: none; }
+
+/* ── Mood Orbs ────────────────────────────────────────────── */
+.mood-orb-bubble {
+  position: relative;
+  filter: drop-shadow(0 0 10px var(--orb-glow, rgba(180,200,230,0.4)));
+}
+.mood-orb-bubble::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--orb-core, radial-gradient(circle, #FFFFFF 0%, rgba(255,255,255,0.7) 60%, transparent 100%));
+  box-shadow: 0 0 10px var(--orb-glow, rgba(255,255,255,0.6));
+  animation: orbCorePulse 6.5s ease-in-out infinite;
+  z-index: 3;
+}
+.mood-orb-ripple {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 100%; height: 100%;
+  margin-top: -50%; margin-left: -50%;
+  border-radius: 50%;
+  background: var(--orb-ripple, radial-gradient(circle, transparent 60%, rgba(255,255,255,0.18) 70%, transparent 100%));
+  border: 1px solid var(--orb-ring, rgba(255,255,255,0.5));
+  pointer-events: none;
+  transform: scale(0.2);
+  opacity: 0;
+  animation: orbRipple 6.5s ease-out infinite;
+}
+.mood-orb-ripple.r2 { animation-delay: 2.2s; }
+.mood-orb-ripple.r3 { animation-delay: 4.4s; }
+@keyframes orbCorePulse {
+  0%,100% { transform: scale(1);    opacity: 1; }
+  45%      { transform: scale(1.35); opacity: 0.95; }
+  55%      { transform: scale(1.35); opacity: 0.95; }
+}
+@keyframes orbRipple {
+  0%   { transform: scale(0.25); opacity: 0; }
+  20%  { opacity: 0.9; }
+  100% { transform: scale(1.7);  opacity: 0; }
+}
+
+/* Night orb colors */
+.mode-night .mood-orb-bubble.calm    { --orb-glow: rgba(150,200,240,0.6);  --orb-ring: rgba(200,225,250,0.55); --orb-core: radial-gradient(circle, #FFFFFF 0%, rgba(180,215,245,0.8) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(150,200,240,0.22) 75%, transparent 100%); }
+.mode-night .mood-orb-bubble.heavy   { --orb-glow: rgba(140,160,195,0.55); --orb-ring: rgba(195,205,225,0.5);  --orb-core: radial-gradient(circle, #F0F2F8 0%, rgba(170,185,210,0.75) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(140,160,195,0.2) 75%, transparent 100%); }
+.mode-night .mood-orb-bubble.anxious { --orb-glow: rgba(245,205,130,0.6);  --orb-ring: rgba(255,225,170,0.55); --orb-core: radial-gradient(circle, #FFFAEC 0%, rgba(245,215,150,0.85) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(245,205,130,0.22) 75%, transparent 100%); }
+.mode-night .mood-orb-bubble.alive   { --orb-glow: rgba(255,170,110,0.65); --orb-ring: rgba(255,210,170,0.6);  --orb-core: radial-gradient(circle, #FFF6E8 0%, rgba(255,200,150,0.9) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(255,170,110,0.25) 75%, transparent 100%); }
+.mode-night .mood-orb-bubble.tender  { --orb-glow: rgba(235,175,200,0.6);  --orb-ring: rgba(245,210,225,0.55); --orb-core: radial-gradient(circle, #FFF4F8 0%, rgba(240,200,220,0.85) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(235,175,200,0.22) 75%, transparent 100%); }
+
+/* Day orb colors */
+.mode-day .mood-orb-bubble.steady    { --orb-glow: rgba(150,200,240,0.55); --orb-ring: rgba(180,215,245,0.6);  --orb-core: radial-gradient(circle, #FFFFFF 0%, rgba(180,215,245,0.9) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(150,200,240,0.22) 75%, transparent 100%); }
+.mode-day .mood-orb-bubble.scattered { --orb-glow: rgba(165,180,210,0.5);  --orb-ring: rgba(200,210,230,0.55); --orb-core: radial-gradient(circle, #FFFFFF 0%, rgba(195,210,230,0.85) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(165,180,210,0.2) 75%, transparent 100%); }
+.mode-day .mood-orb-bubble.restless  { --orb-glow: rgba(250,215,140,0.55); --orb-ring: rgba(255,232,180,0.6);  --orb-core: radial-gradient(circle, #FFFFFF 0%, rgba(250,220,160,0.9) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(250,215,140,0.22) 75%, transparent 100%); }
+.mode-day .mood-orb-bubble.energized { --orb-glow: rgba(255,175,115,0.65); --orb-ring: rgba(255,210,170,0.6);  --orb-core: radial-gradient(circle, #FFFFFF 0%, rgba(255,205,160,0.95) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(255,175,115,0.25) 75%, transparent 100%); }
+.mode-day .mood-orb-bubble.soft      { --orb-glow: rgba(240,180,205,0.55); --orb-ring: rgba(250,215,228,0.6);  --orb-core: radial-gradient(circle, #FFFFFF 0%, rgba(245,205,222,0.9) 60%, transparent 100%); --orb-ripple: radial-gradient(circle, transparent 55%, rgba(240,180,205,0.22) 75%, transparent 100%); }
+
+/* Per-orb timing variation */
+.mood-orb:nth-child(1) .mood-orb-bubble::before, .mood-orb:nth-child(1) .mood-orb-ripple { animation-duration: 6.5s; }
+.mood-orb:nth-child(2) .mood-orb-bubble::before, .mood-orb:nth-child(2) .mood-orb-ripple { animation-duration: 7.2s; }
+.mood-orb:nth-child(3) .mood-orb-bubble::before, .mood-orb:nth-child(3) .mood-orb-ripple { animation-duration: 6.8s; }
+.mood-orb:nth-child(4) .mood-orb-bubble::before, .mood-orb:nth-child(4) .mood-orb-ripple { animation-duration: 6.2s; }
+.mood-orb:nth-child(5) .mood-orb-bubble::before, .mood-orb:nth-child(5) .mood-orb-ripple { animation-duration: 7.5s; }
+
+/* Act indicator dots */
+.acts-indicator {
+  display: flex; gap: 7px; justify-content: center;
+  padding: 16px 0 4px;
+}
+.acts-indicator .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--surface-mid, rgba(149,176,217,0.08));
+  transition: all 0.4s var(--ease-soft);
+}
+.acts-indicator .dot.active { width: 18px; border-radius: 3px; background: var(--warm, #E89B6C); }
+.acts-indicator .dot.done   { background: var(--accent, #95B0D9); }
+
 /* ── Reduced motion ───────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .cozy-room__flame, .cozy-room__ember-dot, .cozy-room__logs::before,
-  .cozy-room__logs::after, .cozy-room__moon, .cozy-room__stars i {
+  .cozy-room__logs::after, .cozy-room__moon, .cozy-room__stars i,
+  .mood-orb-bubble::before, .mood-orb-ripple {
     animation: none;
   }
 }

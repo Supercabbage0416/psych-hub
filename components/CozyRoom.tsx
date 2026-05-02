@@ -10,10 +10,16 @@ export default function CozyRoom({ hideFireplace, hideLamp }: CozyRoomProps) {
     <>
       <div className="cozy-room" aria-hidden="true" />
       <div className="cozy-room__window" aria-hidden="true" />
+
+      {/* Night: moon + stars */}
       <div className="cozy-room__moon" aria-hidden="true" />
       <div className="cozy-room__stars" aria-hidden="true">
         <i /><i /><i />
       </div>
+
+      {/* Day: clouds */}
+      <div className="cozy-room__cloud" aria-hidden="true" />
+      <div className="cozy-room__cloud" aria-hidden="true" />
 
       {!hideLamp && (
         <div className="cozy-room__lamp" aria-hidden="true">
@@ -22,6 +28,7 @@ export default function CozyRoom({ hideFireplace, hideLamp }: CozyRoomProps) {
         </div>
       )}
 
+      {/* Night: fireplace */}
       {!hideFireplace && (
         <>
           <div className="cozy-room__fireplace" aria-hidden="true">
@@ -43,6 +50,20 @@ export default function CozyRoom({ hideFireplace, hideLamp }: CozyRoomProps) {
           </div>
         </>
       )}
+
+      {/* Day: coffee mug */}
+      <div className="cozy-room__coffee" aria-hidden="true">
+        <div className="cozy-room__steam">
+          <div className="cozy-room__steam-wisp" />
+          <div className="cozy-room__steam-wisp" />
+          <div className="cozy-room__steam-wisp" />
+        </div>
+        <div className="cozy-room__mug">
+          <div className="cozy-room__mug-liquid" />
+        </div>
+        <div className="cozy-room__mug-handle" />
+        <div className="cozy-room__mug-saucer" />
+      </div>
     </>
   );
 }

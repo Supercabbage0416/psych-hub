@@ -3,6 +3,7 @@ import { Nunito, Lora } from 'next/font/google';
 import './globals.css';
 import './styles/cozy-room.css';
 import BottomNav from '@/components/BottomNav';
+import PeriodBody from '@/components/PeriodBody';
 
 const nunito = Nunito({
   subsets: ['latin'],
@@ -47,11 +48,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="font-sans bg-cream min-h-screen">
-        <main className="max-w-lg mx-auto pb-24">
-          {children}
-        </main>
-        <BottomNav />
+      <body className="font-sans bg-cream min-h-screen mode-night">
+        <PeriodBody>
+          <main className="max-w-lg mx-auto pb-24">
+            {children}
+          </main>
+          <BottomNav />
+        </PeriodBody>
       </body>
     </html>
   );

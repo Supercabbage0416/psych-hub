@@ -12,7 +12,12 @@ interface Props {
 }
 
 const MOOD_ICONS: Record<string, string> = {
+  // original
   calm: '🌿', okay: '☁️', alive: '✨', heavy: '🌧️', scattered: '🌀', numb: '🫥',
+  // night orbs
+  anxious: '⚡', tender: '🌸',
+  // day orbs
+  steady: '🌤️', restless: '🔥', energized: '💫', soft: '🫧',
 };
 
 function ScaleDot({ value, max = 5, high = false }: { value: number; max?: number; high?: boolean }) {
