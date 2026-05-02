@@ -6,6 +6,7 @@ import { createBrowserClient } from '@supabase/ssr';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +21,12 @@ export default function LoginPage() {
       email: email.trim(),
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
-    setStatus(error ? 'error' : 'sent');
+    if (error) {
+      setErrorMsg(error.message);
+      setStatus('error');
+    } else {
+      setStatus('sent');
+    }
   }
 
   return (
@@ -125,7 +131,7 @@ export default function LoginPage() {
 
             {status === 'error' && (
               <p style={{ fontSize: 13, color: '#ff6b6b', marginBottom: 12 }}>
-                Something went wrong. Please try again.
+                {errorMsg || 'Something went wrong. Please try again.'}
               </p>
             )}
 
