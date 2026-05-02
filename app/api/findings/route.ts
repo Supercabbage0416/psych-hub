@@ -135,7 +135,7 @@ async function fetchCategoryItems(categoryId: CategoryId): Promise<RawItem[]> {
 }
 
 // POST /api/findings — body: { mood, categories: CategoryId[] }
-// Returns { articles: [{ title, url, source }] } for the client cache
+// Returns { articles: [{ title, url, source, summary }] } for the client cache
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const categoryIds: CategoryId[] = Array.isArray(body.categories)
@@ -144,17 +144,20 @@ export async function POST(req: Request) {
 
   const ids = categoryIds.length > 0 ? categoryIds : DEFAULT_CATEGORIES;
   const usedUrls = new Set<string>();
-  const articles: { title: string; url: string; source: string }[] = [];
+  const articles: { title: string; url: string; source: string; summary: string }[] = [];
 
   for (const id of ids) {
     const items = await fetchCategoryItems(id);
     for (const item of items) {
       if (!item.url || usedUrls.has(item.url)) continue;
       usedUrls.add(item.url);
-      // Extract domain as source if no source provided
       let source = '';
       try { source = new URL(item.url).hostname.replace('www.', ''); } catch { /* ignore */ }
-      articles.push({ title: item.title, url: item.url, source });
+      // Trim desc to a readable 2-sentence summary (first 220 chars, cut at sentence)
+      let summary = item.desc?.slice(0, 300) ?? '';
+      const cutAt = summary.lastIndexOf('. ', 220);
+      if (cutAt > 60) summary = summary.slice(0, cutAt + 1);
+      articles.push({ title: item.title, url: item.url, source, summary });
       if (articles.length >= 10) break;
     }
     if (articles.length >= 10) break;

@@ -23,7 +23,7 @@ export default function ReflectPage() {
   const [tab, setTab]           = useState<'readings' | 'thoughts'>('readings');
   const [entries, setEntries]   = useState<JournalEntry[]>([]);
   const [saved, setSaved]       = useState<Article[]>([]);
-  const [todayArticle, setTodayArticle] = useState<{ title: string; url: string; source: string } | null>(null);
+  const [todayArticle, setTodayArticle] = useState<{ title: string; url: string; source: string; summary?: string } | null>(null);
   const [articleLoading, setArticleLoading] = useState(true);
   const [loading, setLoading]   = useState(true);
 
@@ -51,7 +51,7 @@ export default function ReflectPage() {
           const data = JSON.parse(cached);
           const top = data.articles?.[0] ?? data.findings?.[0];
           if (top) {
-            setTodayArticle({ title: top.title, url: top.url, source: top.source ?? '' });
+            setTodayArticle({ title: top.title, url: top.url, source: top.source ?? '', summary: top.summary ?? '' });
             setArticleLoading(false);
             return;
           }
@@ -66,7 +66,7 @@ export default function ReflectPage() {
           const data = await res.json();
           localStorage.setItem(key, JSON.stringify(data));
           const top = data.articles?.[0] ?? data.findings?.[0];
-          if (top) setTodayArticle({ title: top.title, url: top.url, source: top.source ?? '' });
+          if (top) setTodayArticle({ title: top.title, url: top.url, source: top.source ?? '', summary: top.summary ?? '' });
         }
       } catch { /* ignore */ }
       setArticleLoading(false);
@@ -130,6 +130,9 @@ export default function ReflectPage() {
                   {card(<>
                     <p style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ember, #ff8c5a)', marginBottom: 8, fontWeight: 600 }}>Matched for you</p>
                     <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 18, fontWeight: 500, color: 'var(--ink, #e8eef9)', lineHeight: 1.35, marginBottom: 6 }}>{todayArticle.title}</p>
+                    {todayArticle.summary && (
+                      <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 13, color: 'var(--ink-2, #a8b4cf)', lineHeight: 1.6, marginBottom: 8, fontStyle: 'italic' }}>{todayArticle.summary}</p>
+                    )}
                     <p style={{ fontSize: 12, color: 'var(--ink-3, #6b789a)' }}>{todayArticle.source}</p>
                   </>)}
                 </a>

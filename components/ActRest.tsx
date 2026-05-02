@@ -17,7 +17,7 @@ interface Props {
 
 export default function ActRest({ period, mood, lesson, onExit }: Props) {
   const [pattern, setPattern]           = useState<PatternData | null>(null);
-  const [article, setArticle]           = useState<{ title: string; url: string; source: string; reason: string } | null>(null);
+  const [article, setArticle]           = useState<{ title: string; url: string; source: string; reason: string; summary?: string } | null>(null);
   const [loadingPattern, setLoadingPattern] = useState(true);
   const [loadingArticle, setLoadingArticle] = useState(true);
 
@@ -56,7 +56,7 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
       try {
         const cats = getCategoriesForCheckIn({ mood: mood as MoodValue });
         const key = `findings_v11_${cats[0]}`;
-        let data: { articles?: { title: string; url: string; source?: string }[]; findings?: { title: string; url: string; source?: string }[]; reason?: string } | null = null;
+        let data: { articles?: { title: string; url: string; source?: string; summary?: string }[]; findings?: { title: string; url: string; source?: string; summary?: string }[]; reason?: string } | null = null;
 
         const cached = localStorage.getItem(key);
         if (cached) {
@@ -75,7 +75,7 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
 
         if (data) {
           const top = data.articles?.[0] ?? data.findings?.[0];
-          if (top) setArticle({ title: top.title, url: top.url, source: top.source ?? '', reason: data.reason ?? `matched to '${mood}'` });
+          if (top) setArticle({ title: top.title, url: top.url, source: top.source ?? '', summary: top.summary ?? '', reason: data.reason ?? `matched to '${mood}'` });
         }
       } catch { /* ignore */ }
       setLoadingArticle(false);
@@ -195,6 +195,11 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
             <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 18, fontWeight: 500, color: 'var(--ink, #e8eef9)', lineHeight: 1.35, marginBottom: 6 }}>
               {article.title}
             </p>
+            {article.summary && (
+              <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 13, color: 'var(--ink-2, #a8b4cf)', lineHeight: 1.6, marginBottom: 8, fontStyle: 'italic' }}>
+                {article.summary}
+              </p>
+            )}
             <p style={{ fontSize: 12, color: 'var(--ink-3, #6b789a)' }}>
               {article.source}
             </p>
