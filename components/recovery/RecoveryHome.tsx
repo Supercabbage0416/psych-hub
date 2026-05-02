@@ -5,25 +5,19 @@ import { getStage, STAGE_ORDER, TONE } from '@/lib/recovery/config';
 import { getTodayNudge, shouldOfferChallenge } from '@/lib/recovery/scoring';
 import { getTodayRecord, activateLowEnergyMode, deactivateLowEnergyMode, saveState } from '@/lib/recovery/storage';
 
-const STAGE_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  stabilization: { bg: 'bg-blue-50',    text: 'text-blue-600',   border: 'border-blue-200',  dot: 'bg-blue-400' },
-  competence:    { bg: 'bg-sage-pale',   text: 'text-sage',       border: 'border-sage-light',dot: 'bg-sage' },
-  autonomy:      { bg: 'bg-amber-50',    text: 'text-amber-700',  border: 'border-amber-200', dot: 'bg-amber-400' },
-  social:        { bg: 'bg-rose-pale',   text: 'text-rose',       border: 'border-rose-light',dot: 'bg-rose' },
-  meaning:       { bg: 'bg-purple-50',   text: 'text-purple-600', border: 'border-purple-200',dot: 'bg-purple-400' },
+const STAGE_ACCENT: Record<string, string> = {
+  stabilization: '#7aa6ff',
+  competence:    '#7ec8a0',
+  autonomy:      '#f0b46a',
+  social:        '#e88fa0',
+  meaning:       '#b591ff',
 };
 
 const COMPLETION_LABEL: Record<string, string> = {
   completed: 'Completed ✓',
-  partial: 'Partially done',
-  tried: 'Tried',
-  skipped: 'Could not continue',
-};
-const COMPLETION_COLOR: Record<string, string> = {
-  completed: 'text-sage',
-  partial: 'text-amber-600',
-  tried: 'text-warm-500',
-  skipped: 'text-warm-400',
+  partial:   'Partially done',
+  tried:     'Tried',
+  skipped:   'Could not continue',
 };
 
 interface Props {
@@ -33,18 +27,15 @@ interface Props {
 }
 
 export default function RecoveryHome({ state, onStateChange, onStartReflection }: Props) {
-  const stage = getStage(state.currentStage);
-  const colors = STAGE_COLORS[state.currentStage];
+  const stage    = getStage(state.currentStage);
+  const accent   = STAGE_ACCENT[state.currentStage] ?? '#7aa6ff';
   const todayRecord = getTodayRecord(state);
-  const nudge = getTodayNudge(state);
+  const nudge    = getTodayNudge(state);
   const stageIdx = STAGE_ORDER.indexOf(state.currentStage);
-  const canOffer = shouldOfferChallenge(state);
 
-  const stageRecords = state.records.filter(r => r.stageId === state.currentStage);
-  const today = new Date().toISOString().split('T')[0];
+  const today      = new Date().toISOString().split('T')[0];
   const stageStart = new Date(state.stageStartDate);
-  const now = new Date(today);
-  const daysInStage = Math.floor((now.getTime() - stageStart.getTime()) / 86400000) + 1;
+  const daysInStage = Math.floor((new Date(today).getTime() - stageStart.getTime()) / 86400000) + 1;
 
   const toggleLowEnergy = () => {
     const next = state.lowEnergyMode
@@ -55,107 +46,117 @@ export default function RecoveryHome({ state, onStateChange, onStartReflection }
   };
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Stage header */}
-      <div className={`rounded-3xl p-5 ${colors.bg} border ${colors.border}`}>
-        <div className="flex items-center justify-between mb-3">
+      <div style={{
+        borderRadius: 20, padding: '18px 20px',
+        background: 'rgba(255,255,255,0.04)', border: `1px solid ${accent}28`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <p className="text-xs font-medium text-warm-400 uppercase tracking-wide mb-0.5">
+            <p style={{ fontSize: 11, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'var(--ink-3, #6b789a)', marginBottom: 3 }}>
               Stage {stageIdx + 1} of {STAGE_ORDER.length}
             </p>
-            <h2 className="font-serif text-2xl text-warm-900">{stage.name}</h2>
-            <p className={`text-xs font-medium mt-0.5 ${colors.text}`}>{stage.tagline}</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 24, fontWeight: 500, color: 'var(--ink, #e8eef9)', marginBottom: 2 }}>
+              {stage.name}
+            </h2>
+            <p style={{ fontSize: 12, color: accent }}>{stage.tagline}</p>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-serif font-semibold text-warm-800">{daysInStage}</p>
-            <p className="text-xs text-warm-400">days in</p>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 28, fontWeight: 500, color: 'var(--ink, #e8eef9)' }}>{daysInStage}</p>
+            <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)' }}>days in</p>
           </div>
         </div>
-
-        {/* Stage progress dots */}
-        <div className="flex gap-1.5 mt-2">
+        {/* Stage progress bar */}
+        <div style={{ display: 'flex', gap: 4 }}>
           {STAGE_ORDER.map((id, i) => (
-            <div
-              key={id}
-              className={`h-1.5 flex-1 rounded-full transition-all ${
-                i < stageIdx ? colors.dot :
-                i === stageIdx ? `${colors.dot} opacity-100` :
-                'bg-warm-200'
-              } ${i > stageIdx ? 'opacity-30' : ''}`}
-            />
+            <div key={id} style={{
+              flex: 1, height: 4, borderRadius: 2,
+              background: i < stageIdx ? accent : i === stageIdx ? accent : 'rgba(255,255,255,0.08)',
+              opacity: i > stageIdx ? 0.25 : 1,
+              transition: 'all 0.4s',
+            }} />
           ))}
         </div>
       </div>
 
-      {/* Mode badge */}
+      {/* Low energy mode badge */}
       {state.lowEnergyMode && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+        <div style={{
+          borderRadius: 16, padding: '12px 16px',
+          background: 'rgba(122,166,255,0.06)', border: '1px solid rgba(122,166,255,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
           <div>
-            <p className="text-xs font-semibold text-blue-600 mb-0.5">Low-energy mode</p>
-            <p className="text-xs text-blue-500 leading-snug">{TONE.low_energy_activated}</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent, #7aa6ff)', marginBottom: 2 }}>Gentle mode</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2, #a8b4cf)', lineHeight: 1.5 }}>{TONE.low_energy_activated}</p>
           </div>
-          <button
-            onClick={toggleLowEnergy}
-            className="text-xs text-blue-400 underline underline-offset-2 ml-3 flex-shrink-0"
-          >
-            Turn off
+          <button onClick={toggleLowEnergy} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--ink-3, #6b789a)', textDecoration: 'underline', marginLeft: 12, flexShrink: 0 }}>
+            Off
           </button>
         </div>
       )}
 
-      {/* Success streak offer */}
-      {canOffer && !state.lowEnergyMode && (
-        <div className="bg-sage-pale border border-sage-light rounded-2xl px-4 py-3">
-          <p className="text-xs font-semibold text-sage mb-0.5">Five days in a row</p>
-          <p className="text-xs text-warm-500">{TONE.success_streak_5}</p>
+      {/* Streak offer */}
+      {shouldOfferChallenge(state) && !state.lowEnergyMode && (
+        <div style={{ borderRadius: 16, padding: '12px 16px', background: 'rgba(126,200,160,0.06)', border: '1px solid rgba(126,200,160,0.15)' }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#7ec8a0', marginBottom: 2 }}>Five days in a row</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2, #a8b4cf)' }}>{TONE.success_streak_5}</p>
         </div>
       )}
 
       {/* Today's nudge */}
-      <div className="bg-white rounded-3xl p-5 shadow-card border border-warm-100">
-        <p className="text-xs text-warm-400 uppercase tracking-wide mb-3">Today's nudge</p>
-        <p className="font-serif text-lg text-warm-900 leading-snug mb-4">{nudge}</p>
+      <div style={{ borderRadius: 20, padding: '18px 20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <p style={{ fontSize: 11, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'var(--ink-3, #6b789a)', marginBottom: 10 }}>
+          Today&apos;s nudge
+        </p>
+        <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 18, color: 'var(--ink, #e8eef9)', lineHeight: 1.5, marginBottom: 16 }}>
+          {nudge}
+        </p>
 
         {todayRecord ? (
-          <div className="pt-3 border-t border-warm-100">
-            <p className="text-xs text-warm-400 mb-1">Today's reflection</p>
-            <p className={`text-sm font-medium ${COMPLETION_COLOR[todayRecord.completion]}`}>
+          <div style={{ paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)', marginBottom: 4 }}>Today&apos;s reflection</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: accent }}>
               {COMPLETION_LABEL[todayRecord.completion]}
             </p>
             {todayRecord.feedback && (
-              <p className="text-xs text-warm-400 mt-2 leading-relaxed italic">"{todayRecord.feedback}"</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2, #a8b4cf)', marginTop: 8, lineHeight: 1.6, fontStyle: 'italic' }}>
+                &ldquo;{todayRecord.feedback}&rdquo;
+              </p>
             )}
-            <button
-              onClick={onStartReflection}
-              className="mt-3 text-xs text-sage underline underline-offset-2"
-            >
+            <button onClick={onStartReflection} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: accent, textDecoration: 'underline', marginTop: 10, padding: 0 }}>
               Update reflection
             </button>
           </div>
         ) : (
           <button
             onClick={onStartReflection}
-            className={`w-full py-3 rounded-2xl text-sm font-medium ${colors.bg} ${colors.text} border ${colors.border} active:scale-[0.98] transition-transform`}
-          >
-            Start today's reflection →
+            style={{
+              width: '100%', padding: '13px 0', borderRadius: 999, fontSize: 14, fontWeight: 500,
+              background: `${accent}14`, border: `1px solid ${accent}40`,
+              color: accent, cursor: 'pointer', transition: 'all 0.2s',
+            }}>
+            Reflect on today&apos;s nudge →
           </button>
         )}
       </div>
 
-      {/* Streak info */}
+      {/* Streak */}
       {state.successStreak > 1 && (
-        <div className="flex items-center gap-2 px-1">
-          <div className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-          <p className="text-xs text-warm-400">{state.successStreak} days showing up in a row</p>
-        </div>
+        <p style={{ fontSize: 12, color: 'var(--ink-3, #6b789a)', paddingLeft: 4 }}>
+          {state.successStreak} days showing up in a row
+        </p>
       )}
 
-      {/* Low energy toggle (when not in low energy mode) */}
+      {/* Gentle mode toggle */}
       {!state.lowEnergyMode && (
-        <button
-          onClick={toggleLowEnergy}
-          className="w-full py-3 text-xs text-warm-400 border border-warm-100 rounded-2xl bg-white"
-        >
+        <button onClick={toggleLowEnergy}
+          style={{
+            width: '100%', padding: '12px 0', borderRadius: 999, fontSize: 13,
+            background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
+            color: 'var(--ink-3, #6b789a)', cursor: 'pointer',
+          }}>
           Today feels too heavy — switch to gentle mode
         </button>
       )}

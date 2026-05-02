@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePeriod } from '@/lib/usePeriod';
 import { loadSession, saveSession } from '@/lib/session';
 import type { MoodValue } from '@/lib/checkin';
+import { getCategoriesForCheckIn } from '@/lib/articleCategories';
 import ActArrive from '@/components/ActArrive';
 import ActReflect from '@/components/ActReflect';
 import ActRest from '@/components/ActRest';
@@ -40,6 +41,23 @@ export default function HomePage() {
     setLesson(savedLesson);
     saveSession({ lesson: savedLesson, act: 'rest' });
     setAct('rest');
+    prefetchArticle(mood);
+  }
+
+  function prefetchArticle(currentMood: MoodValue) {
+    try {
+      const cats = getCategoriesForCheckIn({ mood: currentMood });
+      const key = `findings_v11_${cats[0]}`;
+      if (!localStorage.getItem(key)) {
+        fetch('/api/findings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mood: currentMood, categories: cats.slice(0, 2) }),
+        }).then(r => r.ok ? r.json() : null).then(data => {
+          if (data) localStorage.setItem(key, JSON.stringify(data));
+        }).catch(() => {});
+      }
+    } catch { /* ignore */ }
   }
 
   function handleExit() {

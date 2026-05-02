@@ -5,82 +5,70 @@ import type { RecoveryState } from '@/lib/recovery/types';
 import { loadState, saveState } from '@/lib/recovery/storage';
 import RecoveryHome from '@/components/recovery/RecoveryHome';
 import DailyReflection from '@/components/recovery/DailyReflection';
-import PatternTracker from '@/components/recovery/PatternTracker';
-import WeeklyReview from '@/components/recovery/WeeklyReview';
-import StageReview from '@/components/recovery/StageReview';
-import AIInsights from '@/components/recovery/AIInsights';
+import ProgressDashboard from '@/components/recovery/ProgressDashboard';
 
-type Tab = 'today' | 'progress' | 'weekly' | 'stage' | 'insights';
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'today',    label: 'Today' },
-  { id: 'progress', label: 'Progress' },
-  { id: 'weekly',   label: 'Weekly' },
-  { id: 'stage',    label: 'Stage' },
-  { id: 'insights', label: 'AI' },
-];
+type Tab = 'today' | 'progress';
 
 export default function RecoverPage() {
   const [state, setState] = useState<RecoveryState | null>(null);
   const [tab, setTab] = useState<Tab>('today');
   const [showReflection, setShowReflection] = useState(false);
 
-  useEffect(() => {
-    setState(loadState());
-  }, []);
+  useEffect(() => { setState(loadState()); }, []);
 
   const handleStateChange = (next: RecoveryState) => {
     setState(next);
     saveState(next);
   };
 
-  if (!state) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-6 h-6 rounded-full border-2 border-sage border-t-transparent animate-spin" />
-      </div>
-    );
-  }
+  if (!state) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100svh', background: 'var(--bg, #0d1424)' }}>
+      <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--accent, #7aa6ff)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  );
 
   return (
-    <div className="px-5 pt-8 animate-fade-in pb-4">
+    <div style={{ minHeight: '100svh', background: 'var(--bg, #0d1424)', padding: '0 0 80px' }}>
       {/* Header */}
-      <div className="mb-5">
-        <p className="text-warm-400 text-xs uppercase tracking-wide mb-0.5">Where you are tonight</p>
-        <h1 className="font-serif text-3xl text-warm-900">Mend</h1>
+      <div style={{ padding: '52px 20px 16px' }}>
+        <p style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3, #6b789a)', marginBottom: 4 }}>
+          Where you are tonight
+        </p>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 30, fontWeight: 500, color: 'var(--ink, #e8eef9)' }}>
+          Mend
+        </h1>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-warm-100 rounded-2xl p-1 mb-6">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${
-              tab === t.id
-                ? 'bg-white text-warm-900 shadow-sm'
-                : 'text-warm-500'
-            }`}
-          >
+      {/* 2-tab bar */}
+      <div style={{ display: 'flex', gap: 4, margin: '0 20px 20px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 4 }}>
+        {([
+          { id: 'today' as Tab, label: 'Today' },
+          { id: 'progress' as Tab, label: 'Progress' },
+        ]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 500,
+              border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+              background: tab === t.id ? 'rgba(122,166,255,0.12)' : 'transparent',
+              color: tab === t.id ? 'var(--accent, #7aa6ff)' : 'var(--ink-3, #6b789a)',
+            }}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
-      {tab === 'today' && (
-        <RecoveryHome
-          state={state}
-          onStateChange={handleStateChange}
-          onStartReflection={() => setShowReflection(true)}
-        />
-      )}
-      {tab === 'progress' && <PatternTracker state={state} />}
-      {tab === 'weekly'   && <WeeklyReview state={state} />}
-      {tab === 'stage'    && <StageReview state={state} onStateChange={handleStateChange} />}
-      {tab === 'insights' && <AIInsights state={state} />}
+      {/* Content */}
+      <div style={{ padding: '0 20px' }}>
+        {tab === 'today' && (
+          <RecoveryHome
+            state={state}
+            onStateChange={handleStateChange}
+            onStartReflection={() => setShowReflection(true)}
+          />
+        )}
+        {tab === 'progress' && <ProgressDashboard state={state} onStateChange={handleStateChange} />}
+      </div>
 
-      {/* Daily reflection modal */}
       {showReflection && (
         <DailyReflection
           state={state}
