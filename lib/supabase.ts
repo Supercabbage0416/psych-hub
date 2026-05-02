@@ -134,6 +134,7 @@ export async function getGrowthStats() {
 export async function saveUserArticle(article: {
   title: string; content?: string; source?: string; url?: string;
   category_id?: string; category_name?: string; summary?: string; sentiment?: string;
+  tags?: string[];
 }) {
   const userId = await getUserId();
   return supabase.from('user_articles').insert({ user_id: userId, ...article });

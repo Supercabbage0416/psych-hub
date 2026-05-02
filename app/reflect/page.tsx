@@ -7,7 +7,7 @@ import { loadSession } from '@/lib/session';
 import type { MoodValue } from '@/lib/checkin';
 
 interface JournalEntry { id: string; content: string; created_at: string; entry_type?: string; prompt?: string }
-interface Article { id: string; title: string; url?: string; source?: string; created_at?: string; category_name?: string }
+interface Article { id: string; title: string; url?: string; source?: string; created_at?: string; category_name?: string; tags?: string[] }
 
 function dayLabel(iso: string) {
   const d = new Date(iso);
@@ -157,7 +157,14 @@ export default function ReflectPage() {
                             {a.category_name && <p style={{ fontSize: 10, color: 'var(--ink-3, #6b789a)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{a.category_name}</p>}
                             <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 16, color: 'var(--ink, #e8eef9)', lineHeight: 1.4, marginBottom: 4 }}>{a.title}</p>
                             {a.source && <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)' }}>{a.source}</p>}
-                            {a.created_at && <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)', marginTop: 4 }}>{dayLabel(a.created_at)}</p>}
+                            {a.tags && a.tags.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                                {a.tags.map(tag => (
+                                  <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(122,166,255,0.1)', border: '1px solid rgba(122,166,255,0.2)', color: 'var(--accent, #7aa6ff)' }}>{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                            {a.created_at && <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)', marginTop: 6 }}>{dayLabel(a.created_at)}</p>}
                           </>)}
                         </a>
                       ) : card(<>
