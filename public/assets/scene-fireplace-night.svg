@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<svg viewBox="0 0 200 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arched stone fireplace with glowing embers">
+  <defs>
+    <radialGradient id="emberGlow" cx="50%" cy="65%" r="50%">
+      <stop offset="0%" stop-color="#FFD27A" stop-opacity="0.75"></stop>
+      <stop offset="35%" stop-color="#E89B6C" stop-opacity="0.45"></stop>
+      <stop offset="70%" stop-color="#C76B4A" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#C76B4A" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="hearthStone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a3328"></stop>
+      <stop offset="100%" stop-color="#22201a"></stop>
+    </linearGradient>
+    <linearGradient id="hearthInside" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1410"></stop>
+      <stop offset="100%" stop-color="#3a1a0a"></stop>
+    </linearGradient>
+    <radialGradient id="logGlow" cx="50%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#FFD27A"></stop>
+      <stop offset="50%" stop-color="#E89B6C"></stop>
+      <stop offset="100%" stop-color="#C76B4A"></stop>
+    </radialGradient>
+  </defs>
+
+  
+  <ellipse class="fireplace-glow" cx="100" cy="115" rx="120" ry="80" fill="url(#emberGlow)"></ellipse>
+
+  
+  <path d="M 30 165 L 30 80 Q 30 30 100 30 Q 170 30 170 80 L 170 165 Z" fill="url(#hearthStone)"></path>
+
+  
+  <path d="M 50 160 L 50 90 Q 50 50 100 50 Q 150 50 150 90 L 150 160 Z" fill="url(#hearthInside)"></path>
+
+  
+  <rect x="22" y="160" width="156" height="8" rx="2" fill="#2a261e"></rect>
+  <rect x="22" y="160" width="156" height="2" fill="#4a4438" opacity="0.6"></rect>
+
+  
+  <ellipse cx="100" cy="138" rx="38" ry="8" fill="#3a1a0a"></ellipse>
+  <ellipse cx="100" cy="135" rx="36" ry="7" fill="url(#logGlow)"></ellipse>
+  <ellipse cx="100" cy="133" rx="22" ry="3" fill="#FFE6B8" opacity="0.6"></ellipse>
+
+  
+  <circle class="ember-1" cx="86" cy="120" r="1.6" fill="#FFD27A" opacity="0.9"></circle>
+  <circle class="ember-2" cx="100" cy="115" r="2" fill="#E89B6C" opacity="0.85"></circle>
+  <circle class="ember-3" cx="114" cy="122" r="1.4" fill="#FFE6B8" opacity="0.95"></circle>
+  <circle class="ember-1" cx="92" cy="105" r="1.2" fill="#FFD27A" opacity="0.7"></circle>
+  <circle class="ember-2" cx="108" cy="100" r="1" fill="#E89B6C" opacity="0.8"></circle>
+</svg>

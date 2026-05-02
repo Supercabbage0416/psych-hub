@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Coffee mug on a navy table with steam rising">
+  <defs>
+    <filter id="grainDay" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"></feTurbulence>
+      <feColorMatrix values="0 0 0 0 0.3&#xA;                             0 0 0 0 0.35&#xA;                             0 0 0 0 0.45&#xA;                             0 0 0 0.12 0"></feColorMatrix>
+      <feComposite in2="SourceGraphic" operator="in"></feComposite>
+    </filter>
+    <radialGradient id="steamCloud" cx="50%" cy="65%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"></stop>
+      <stop offset="40%" stop-color="#F0F4FA" stop-opacity="0.7"></stop>
+      <stop offset="75%" stop-color="#D8E0EC" stop-opacity="0.35"></stop>
+      <stop offset="100%" stop-color="#D8E0EC" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+
+  
+  <rect x="0" y="0" width="240" height="220" fill="rgba(180,200,220,0.06)"></rect>
+
+  
+  <path class="rest-steam-path" d="M 110 84 Q 100 72 106 56 Q 100 40 112 28 Q 116 14 124 18 Q 134 12 134 28 Q 142 38 134 52 Q 142 66 130 76 Q 134 86 124 86 Q 116 90 110 84 Z" fill="url(#steamCloud)"></path>
+
+  
+  <path d="M 0 158 L 240 158 L 240 188 L 0 188 Z" fill="#2A4A6E"></path>
+  <path d="M 0 158 L 240 158 L 240 188 L 0 188 Z" fill="#1A3050" filter="url(#grainDay)" opacity="0.55"></path>
+  <line x1="0" y1="158" x2="240" y2="158" stroke="#5A7AA8" stroke-width="1.5" opacity="0.7"></line>
+  <rect x="0" y="186" width="240" height="4" fill="#0F2038"></rect>
+
+  
+  
+  <ellipse cx="124" cy="174" rx="62" ry="9" fill="#0F2038"></ellipse>
+
+  
+  <ellipse cx="120" cy="170" rx="60" ry="9" fill="#E8D8B8"></ellipse>
+  <ellipse cx="120" cy="167" rx="58" ry="6" fill="#F8F0DC"></ellipse>
+  <ellipse cx="120" cy="170" rx="44" ry="5" fill="#C8B898" opacity="0.7"></ellipse>
+
+  
+  <path d="M 150 108 Q 178 108 178 130 Q 178 152 150 152 L 150 144 Q 170 144 170 130 Q 170 116 150 116 Z" fill="#A8B8D0"></path>
+  <path d="M 150 108 Q 178 108 178 130 Q 178 152 150 152 L 150 148 Q 174 148 174 130 Q 174 112 150 112 Z" fill="#7898B8" opacity="0.55"></path>
+
+  
+  <path d="M 82 96 Q 82 90 88 90 L 152 90 Q 158 90 158 96 L 158 158 Q 158 164 152 164 L 88 164 Q 82 164 82 158 Z" fill="#5878A0"></path>
+  <path d="M 82 96 Q 82 90 88 90 L 148 90 Q 154 90 154 96 L 154 158 Q 154 164 148 164 L 88 164 Q 82 164 82 158 Z" fill="#A8B8D0"></path>
+  <path d="M 82 96 Q 82 90 88 90 L 138 90 Q 144 90 144 96 L 144 152 Q 144 158 138 158 L 88 158 Q 82 158 82 152 Z" fill="#F4E8D0"></path>
+  <path d="M 82 96 Q 82 90 88 90 L 116 90 Q 116 124 100 130 L 82 130 Z" fill="#FBF4DE"></path>
+
+  
+  <ellipse cx="118" cy="94" rx="34" ry="6" fill="#1A1208"></ellipse>
+  <ellipse cx="118" cy="94" rx="30" ry="5" fill="#3D2410"></ellipse>
+  <ellipse cx="118" cy="94" rx="24" ry="3.5" fill="#1F1408"></ellipse>
+  <ellipse cx="110" cy="93" rx="8" ry="1.2" fill="#8A5A30" opacity="0.7"></ellipse>
+</svg>

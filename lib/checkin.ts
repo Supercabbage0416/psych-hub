@@ -3,8 +3,9 @@
 
 export type MoodValue =
   | 'calm' | 'okay' | 'alive' | 'heavy' | 'scattered' | 'numb'
-  | 'anxious' | 'tender'                              // night orbs
-  | 'steady' | 'restless' | 'energized' | 'soft';    // day orbs
+  | 'anxious' | 'tender'                                    // night orbs v7
+  | 'steady' | 'restless' | 'energized' | 'soft'           // day orbs v7 (old)
+  | 'locked_in' | 'wired' | 'sharp' | 'foggy';             // day orbs v7.2
 export type ScaleValue = 1 | 2 | 3 | 4 | 5;
 
 export interface DailyCheckIn {

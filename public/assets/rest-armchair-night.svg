@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cozy reading corner with floor lamp and armchair">
+  <defs>
+    <radialGradient id="lampHaloN" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE6B8" stop-opacity="0.95"></stop>
+      <stop offset="40%" stop-color="#F5C078" stop-opacity="0.5"></stop>
+      <stop offset="75%" stop-color="#E89B6C" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#E89B6C" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+
+  
+  <rect x="0" y="0" width="240" height="220" fill="rgba(255,200,150,0.05)"></rect>
+
+  
+  <ellipse class="lamp-light" cx="180" cy="55" rx="72" ry="62" fill="url(#lampHaloN)"></ellipse>
+
+  
+  <ellipse cx="140" cy="208" rx="135" ry="11" fill="#FFD49A" opacity="0.25"></ellipse>
+  <ellipse cx="160" cy="206" rx="80" ry="6" fill="#FFE6B8" opacity="0.22"></ellipse>
+
+  
+  
+  <path d="M 176 70 Q 180 130 194 200 L 200 200 Q 188 130 184 70 Z" fill="#3D2810" opacity="0.85"></path>
+  <path d="M 178 70 Q 182 130 196 200 L 199 200 Q 187 130 183 70 Z" fill="#6B4A28"></path>
+  <path d="M 178 72 Q 182 132 195 199 L 196 199 Q 184 132 180 72 Z" fill="#9A7848" opacity="0.7"></path>
+
+  
+  <ellipse cx="196" cy="206" rx="16" ry="3.5" fill="#3D2810" opacity="0.85"></ellipse>
+  <ellipse cx="196" cy="204" rx="14" ry="3" fill="#6B4A28"></ellipse>
+  <ellipse cx="196" cy="203" rx="11" ry="2" fill="#9A7848" opacity="0.7"></ellipse>
+
+  
+  <path d="M 154 70 Q 152 48 178 42 Q 206 46 206 70 Q 202 80 178 80 Q 158 80 154 70 Z" fill="#C89858" opacity="0.92"></path>
+  <path d="M 154 70 Q 152 48 178 42 Q 204 46 204 68 Q 200 78 176 78 Q 156 78 154 70 Z" fill="#E8C078"></path>
+  <path d="M 154 70 Q 152 48 178 42 Q 200 46 200 64 Q 196 74 174 74 Q 156 74 154 70 Z" fill="#F5DCA0" opacity="0.92"></path>
+  <path d="M 154 70 Q 152 48 178 42 Q 184 44 184 50 Q 168 50 162 60 Q 156 66 154 70 Z" fill="#FFF0C8" opacity="0.85"></path>
+
+  
+  
+  <ellipse cx="78" cy="210" rx="86" ry="8" fill="rgba(40,15,8,0.22)"></ellipse>
+  <ellipse cx="78" cy="208" rx="76" ry="6" fill="rgba(40,15,8,0.32)"></ellipse>
+
+  
+  <path d="M 8 200 L 8 138 Q 8 116 22 112 Q 22 90 36 80 Q 56 70 78 70 Q 100 70 120 80 Q 134 90 134 112 Q 148 116 148 138 L 148 200 Q 148 204 144 204 L 12 204 Q 8 204 8 200 Z" fill="#5A1F10"></path>
+  <path d="M 12 200 L 12 140 Q 12 120 24 116 Q 24 94 38 84 Q 56 75 78 75 Q 100 75 118 84 Q 132 94 132 116 Q 144 120 144 140 L 144 200 Q 144 202 142 202 L 14 202 Q 12 202 12 200 Z" fill="#C76544"></path>
+  <path d="M 14 196 L 14 142 Q 14 122 26 118 Q 26 96 40 87 Q 56 78 76 78 Q 96 78 112 87 Q 124 96 124 116 Q 134 120 134 138 L 134 196 Q 134 198 132 198 L 16 198 Q 14 198 14 196 Z" fill="#D9785C"></path>
+  <path d="M 18 180 L 18 144 Q 18 124 28 120 Q 28 100 42 90 Q 54 84 68 82 Q 64 100 56 120 Q 50 140 48 162 Q 32 168 22 178 Q 18 180 18 180 Z" fill="#E89274" opacity="0.85"></path>
+
+  
+  <path d="M 18 156 Q 18 148 28 148 L 128 148 Q 138 148 138 156 L 138 182 Q 138 186 134 186 L 22 186 Q 18 186 18 182 Z" fill="#E08868" opacity="0.92"></path>
+  <path d="M 18 156 Q 18 148 28 148 L 128 148 Q 138 148 138 156 L 138 162 Q 80 158 18 162 Z" fill="#F0A088" opacity="0.7"></path>
+  <path d="M 18 178 Q 80 174 138 178 L 138 182 Q 138 186 134 186 L 22 186 Q 18 186 18 182 Z" fill="#A8462E" opacity="0.35"></path>
+
+  
+  <ellipse cx="31" cy="208" rx="14" ry="5" fill="#3D1208" opacity="0.35"></ellipse>
+  <ellipse cx="31" cy="206" rx="9" ry="4" fill="#5A2A18" opacity="0.7"></ellipse>
+  <ellipse cx="31" cy="204.5" rx="6" ry="2.5" fill="#8A4A30" opacity="0.65"></ellipse>
+  <ellipse cx="125" cy="208" rx="14" ry="5" fill="#3D1208" opacity="0.35"></ellipse>
+  <ellipse cx="125" cy="206" rx="9" ry="4" fill="#5A2A18" opacity="0.7"></ellipse>
+  <ellipse cx="125" cy="204.5" rx="6" ry="2.5" fill="#8A4A30" opacity="0.65"></ellipse>
+</svg>

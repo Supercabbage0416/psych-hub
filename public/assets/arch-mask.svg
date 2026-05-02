@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="archClip">
+      <path d="M 0 280 L 0 100 Q 0 0 100 0 Q 200 0 200 100 L 200 280 Z"></path>
+    </clipPath>
+  </defs>
+
+  
+  <path d="M 0 280 L 0 100 Q 0 0 100 0 Q 200 0 200 100 L 200 280 Z" fill="#1a2745" stroke="#95B0D9" stroke-width="2" stroke-opacity="0.3"></path>
+</svg>

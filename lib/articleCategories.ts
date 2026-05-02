@@ -280,7 +280,7 @@ export function getCategoriesForCheckIn(checkIn: PartialCheckIn): CategoryId[] {
     weighted.push({ id: 'behavioral_activation', priority: 4 });
     weighted.push({ id: 'meaning_identity', priority: 4 });
   }
-  if (mood === 'anxious') {
+  if (mood === 'anxious' || mood === 'wired') {
     weighted.push({ id: 'stress_recovery', priority: 10 });
     weighted.push({ id: 'emotional_regulation', priority: 8 });
     weighted.push({ id: 'social_anxiety', priority: 6 });
@@ -288,6 +288,15 @@ export function getCategoriesForCheckIn(checkIn: PartialCheckIn): CategoryId[] {
   if (mood === 'tender' || mood === 'soft') {
     weighted.push({ id: 'meaning_identity', priority: 7 });
     weighted.push({ id: 'relationship_belonging', priority: 8 });
+  }
+  if (mood === 'locked_in' || mood === 'sharp') {
+    weighted.push({ id: 'meaning_identity', priority: 8 });
+    weighted.push({ id: 'behavioral_activation', priority: 7 });
+  }
+  if (mood === 'foggy') {
+    weighted.push({ id: 'burnout_recovery', priority: 9 });
+    weighted.push({ id: 'behavioral_activation', priority: 7 });
+    weighted.push({ id: 'emotional_regulation', priority: 5 });
   }
 
   // Deduplicate by id, keep highest priority, sort, take top 3

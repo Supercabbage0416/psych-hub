@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Nunito, Lora } from 'next/font/google';
+import { Nunito, Lora, Cormorant_Garamond } from 'next/font/google';
 import './globals.css';
 import './styles/cozy-room.css';
 import BottomNav from '@/components/BottomNav';
@@ -15,6 +15,13 @@ const lora = Lora({
   subsets: ['latin'],
   variable: '--font-lora',
   weight: ['400', '600'],
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  variable: '--font-cormorant',
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
 });
 
 export const metadata: Metadata = {
@@ -42,7 +49,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${nunito.variable} ${lora.variable}`}>
+    <html lang="en" className={`${nunito.variable} ${lora.variable} ${cormorant.variable}`}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

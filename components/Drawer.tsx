@@ -8,6 +8,7 @@ interface Props {
   period: Period;
   onClose: () => void;
   onTogglePeriod: () => void;
+  onReset?: () => void;
 }
 
 const NAV_LINKS = [
@@ -18,7 +19,7 @@ const NAV_LINKS = [
   { href: '/saved',    label: 'Saved',   icon: '🔖' },
 ];
 
-export default function Drawer({ open, period, onClose, onTogglePeriod }: Props) {
+export default function Drawer({ open, period, onClose, onTogglePeriod, onReset }: Props) {
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
@@ -69,16 +70,32 @@ export default function Drawer({ open, period, onClose, onTogglePeriod }: Props)
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 14px', borderRadius: 12,
-                color: 'var(--text, #E6E1D7)', textDecoration: 'none',
+                color: 'var(--ink, var(--text, #E6E1D7))', textDecoration: 'none',
                 fontSize: 15, fontFamily: 'var(--font-sans, system-ui)',
                 transition: 'background 0.2s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-mid, rgba(149,176,217,0.08))')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <span style={{ fontSize: 18 }}>{link.icon}</span>
               {link.label}
             </a>
           ))}
+          {onReset && (
+            <button onClick={onReset}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 14px', borderRadius: 12, width: '100%',
+                color: 'var(--ink-3, #6b789a)', background: 'none', border: 'none',
+                fontSize: 15, fontFamily: 'var(--font-sans, system-ui)',
+                cursor: 'pointer', textAlign: 'left',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <span style={{ fontSize: 18 }}>🔄</span>
+              Check in again
+            </button>
+          )}
         </nav>
 
         {/* Day/Night toggle footer */}

@@ -1,238 +1,125 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import DailyFindings from '@/components/DailyFindings';
-import GrowthMarkers from '@/components/GrowthMarkers';
-import ThoughtCapture from '@/components/ThoughtCapture';
-import MoodOrbs from '@/components/MoodOrbs';
-import CheckInSummary from '@/components/CheckInSummary';
-import RecoveryNudgeCard from '@/components/RecoveryNudgeCard';
-import CozyRoom from '@/components/CozyRoom';
-import ReflectionBox from '@/components/ReflectionBox';
-import DailyNudgeCard from '@/components/DailyNudgeCard';
-import Drawer from '@/components/Drawer';
-import { getTodayCheckIn, createLesson } from '@/lib/supabase';
-import type { PartialCheckIn } from '@/lib/checkin';
-import { getCategoriesForCheckIn, getCategoryReason } from '@/lib/articleCategories';
-import type { CategoryId } from '@/lib/articleCategories';
 import { usePeriod } from '@/lib/usePeriod';
+import { loadSession, saveSession } from '@/lib/session';
+import type { MoodValue } from '@/lib/checkin';
+import ActArrive from '@/components/ActArrive';
+import ActReflect from '@/components/ActReflect';
+import ActRest from '@/components/ActRest';
+import Drawer from '@/components/Drawer';
 
-function formatDate() {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-}
-
-const MOOD_DISPLAY: Record<string, { emoji: string; word: string }> = {
-  calm:      { emoji: '🌿', word: 'calm' },
-  heavy:     { emoji: '🌫️', word: 'heavy' },
-  anxious:   { emoji: '⚡', word: 'anxious' },
-  alive:     { emoji: '✨', word: 'alive' },
-  okay:      { emoji: '🌤️', word: 'okay' },
-  scattered: { emoji: '💭', word: 'scattered' },
-  numb:      { emoji: '🩶', word: 'numb' },
-  tender:    { emoji: '🌸', word: 'tender' },
-  steady:    { emoji: '🌤️', word: 'steady' },
-  restless:  { emoji: '🔥', word: 'restless' },
-  energized: { emoji: '💫', word: 'energized' },
-  soft:      { emoji: '🫧', word: 'soft' },
-};
-
-function getMoodDisplay(mood: string) {
-  return MOOD_DISPLAY[mood] ?? { emoji: '🌙', word: mood };
-}
+type Act = 'arrive' | 'reflect' | 'rest';
 
 export default function HomePage() {
   const { period, setPeriodOverride } = usePeriod();
-  const [checkIn, setCheckIn] = useState<PartialCheckIn | null>(null);
-  const [showCheckIn, setShowCheckIn] = useState(false);
-  const [showJournal, setShowJournal] = useState(false);
+  const [act, setAct] = useState<Act>('arrive');
+  const [mood, setMood] = useState<MoodValue>('calm');
+  const [lesson, setLesson] = useState('');
   const [showDrawer, setShowDrawer] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [categories, setCategories] = useState<CategoryId[]>([]);
-  const [reasonMap, setReasonMap] = useState<Partial<Record<CategoryId, string>>>({});
 
+  // Restore today's session from localStorage
   useEffect(() => {
-    getTodayCheckIn().then((data) => {
-      if (data) {
-        const ci: PartialCheckIn = {
-          mood: data.mood,
-          energy: data.energy,
-          stress: data.stress,
-          selfWorth: data.self_worth,
-          socialSafety: data.social_safety,
-        };
-        setCheckIn(ci);
-        const cats = getCategoriesForCheckIn(ci);
-        setCategories(cats);
-        const reasons: Partial<Record<CategoryId, string>> = {};
-        cats.forEach(id => { reasons[id] = getCategoryReason(id, ci); });
-        setReasonMap(reasons);
-      } else {
-        setShowCheckIn(true);
-      }
-      setLoaded(true);
-    });
+    const session = loadSession();
+    if (session.mood) {
+      setMood(session.mood as MoodValue);
+      setLesson(session.lesson);
+      setAct(session.act);
+    }
+    setLoaded(true);
   }, []);
 
-  const handleCheckInComplete = (ci: PartialCheckIn) => {
-    setCheckIn(ci);
-    const cats = getCategoriesForCheckIn(ci);
-    setCategories(cats);
-    const reasons: Partial<Record<CategoryId, string>> = {};
-    cats.forEach(id => { reasons[id] = getCategoryReason(id, ci); });
-    setReasonMap(reasons);
-    setShowCheckIn(false);
-  };
+  function handleArrive(selectedMood: MoodValue) {
+    setMood(selectedMood);
+    saveSession({ mood: selectedMood, act: 'reflect' });
+    setAct('reflect');
+  }
+
+  function handleReflect(savedLesson: string) {
+    setLesson(savedLesson);
+    saveSession({ lesson: savedLesson, act: 'rest' });
+    setAct('rest');
+  }
+
+  function handleExit() {
+    saveSession({ act: 'rest' });
+    setAct('rest');
+  }
+
+  function handleReset() {
+    saveSession({ mood: null as unknown as string, act: 'arrive', thoughts: '', lesson: '', thoughtsBurned: false });
+    setAct('arrive');
+    setShowDrawer(false);
+  }
 
   function handleTogglePeriod() {
     setPeriodOverride(period === 'night' ? 'day' : 'night');
   }
 
-  if (!loaded) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-8 h-8 rounded-full border-2 border-sage border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
-  const currentMood = getMoodDisplay(checkIn?.mood ?? 'okay');
-
-  // Period-aware copy
-  const greeting = period === 'night' ? 'Tonight' : 'Today';
-  const tagline = period === 'night'
-    ? 'Pull up a chair. Set the day down.'
-    : 'What are you carrying into this moment?';
+  if (!loaded) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100svh', background: 'var(--bg, #0d1424)' }}>
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent, #7aa6ff)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  );
 
   return (
-    <div style={{ position: 'relative', minHeight: '100svh', overflow: 'hidden' }}>
-      <CozyRoom />
+    <>
+      {/* Hamburger — always visible */}
+      <button
+        onClick={() => setShowDrawer(true)}
+        aria-label="Open menu"
+        style={{
+          position: 'fixed', top: 'calc(env(safe-area-inset-top) + 16px)', left: 20,
+          zIndex: 30, width: 40, height: 40, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(232,238,249,0.8)" strokeWidth="2" strokeLinecap="round">
+          <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="16" y2="17" />
+        </svg>
+      </button>
 
-      <div className="relative z-10 px-5 pt-8 pb-28 animate-fade-in">
-
-        {/* Top bar: menu + date + journal FAB */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => setShowDrawer(true)}
-            aria-label="Open menu"
-            style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: 'var(--surface-mid, rgba(149,176,217,0.08))',
-              border: '1px solid var(--line, rgba(149,176,217,0.10))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent, #95B0D9)" strokeWidth="2" strokeLinecap="round">
-              <line x1="4" y1="7" x2="20" y2="7" />
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="17" x2="16" y2="17" />
-            </svg>
-          </button>
-
-          <div className="text-center flex-1">
-            <p className="text-warm-400 text-sm">{formatDate()}</p>
-            <h1 className="font-serif text-3xl text-warm-900">{greeting}</h1>
-            <p className="text-warm-300 text-xs mt-0.5">{tagline}</p>
-          </div>
-
-          {/* placeholder for symmetry */}
-          <div style={{ width: 40 }} />
-        </div>
-
-        {/* Act 1 — ARRIVE: check-in */}
-        <section className="mb-5">
-          <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">How am I today?</p>
-          {checkIn ? (
-            <CheckInSummary checkIn={checkIn} onEdit={() => setShowCheckIn(true)} />
-          ) : (
-            <button onClick={() => setShowCheckIn(true)}
-              className="w-full bg-white rounded-3xl p-5 shadow-card border border-warm-100 text-left">
-              <p className="text-warm-400 text-sm mb-1">You haven&apos;t checked in yet</p>
-              <p className="text-sage text-sm font-medium">Tap to start →</p>
-            </button>
-          )}
-        </section>
-
-        {/* Recovery nudge + AI focus */}
-        <section className="mb-5">
-          <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">One small thing</p>
-          <DailyNudgeCard />
-          <RecoveryNudgeCard />
-        </section>
-
-        {/* Act 2 — REFLECT: by the fire */}
-        <section className="mb-5">
-          <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">
-            {period === 'night' ? 'By the fire' : 'Pause + reflect'}
-          </p>
-          <ReflectionBox
-            currentMood={currentMood}
-            onBurn={async ({ lesson, mood }) => {
-              await createLesson({ text: lesson, mood });
-            }}
-            onStore={async ({ lesson, thoughts, mood }) => {
-              await createLesson({ text: lesson, thoughts, mood });
-            }}
-          />
-        </section>
-
-        {/* Act 3 — REST: article feed */}
-        {categories.length > 0 && (
-          <section className="mb-5">
-            <div className="flex items-baseline justify-between mb-3">
-              <p className="text-xs text-warm-400 uppercase tracking-wide">For you tonight</p>
-              <span className="text-xs text-warm-300">{categories.length} topics</span>
-            </div>
-            <DailyFindings categories={categories} reasonMap={reasonMap} />
-          </section>
-        )}
-
-        {/* Growth markers */}
-        <section className="mb-6">
-          <GrowthMarkers />
-        </section>
-
-        {/* Act indicator dots */}
-        <div className="acts-indicator">
-          <div className={`dot ${checkIn ? 'done' : 'active'}`} />
-          <div className="dot active" />
-          <div className="dot" />
-        </div>
-
-        {/* Journal FAB */}
-        <button
-          onClick={() => setShowJournal(true)}
-          className="fixed right-5 w-14 h-14 bg-sage rounded-full shadow-soft flex items-center justify-center active:scale-95 transition-transform z-40"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-          aria-label="Capture thought">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-
-        {/* Drawer */}
-        <Drawer
-          open={showDrawer}
-          period={period}
-          onClose={() => setShowDrawer(false)}
-          onTogglePeriod={handleTogglePeriod}
-        />
-
-        {showCheckIn && (
-          <MoodOrbs
-            period={period}
-            onComplete={handleCheckInComplete}
-            onClose={() => setShowCheckIn(false)}
-          />
-        )}
-        {showJournal && (
-          <ThoughtCapture
-            quickMode
-            onClose={() => setShowJournal(false)}
-            onSaved={() => setShowJournal(false)}
-          />
-        )}
+      {/* Act progress dots */}
+      <div style={{
+        position: 'fixed', top: 'calc(env(safe-area-inset-top) + 24px)', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 30, display: 'flex', gap: 7,
+      }}>
+        {(['arrive', 'reflect', 'rest'] as Act[]).map(a => (
+          <div key={a} style={{
+            height: 6, borderRadius: 3,
+            background: a === act ? 'var(--ember, #ff8c5a)' : act > a ? 'var(--accent, #7aa6ff)' : 'rgba(255,255,255,0.12)',
+            transition: 'all 0.4s cubic-bezier(0.2,0.8,0.2,1)',
+            width: a === act ? 20 : 6,
+          }} />
+        ))}
       </div>
-    </div>
+
+      {/* Acts */}
+      {act === 'arrive' && (
+        <ActArrive period={period} onComplete={handleArrive} />
+      )}
+      {act === 'reflect' && (
+        <ActReflect
+          period={period}
+          mood={mood}
+          initialThoughts={loadSession().thoughts}
+          initialLesson={loadSession().lesson}
+          onComplete={handleReflect}
+        />
+      )}
+      {act === 'rest' && (
+        <ActRest period={period} mood={mood} lesson={lesson} onExit={handleExit} />
+      )}
+
+      {/* Drawer */}
+      <Drawer
+        open={showDrawer}
+        period={period}
+        onClose={() => setShowDrawer(false)}
+        onTogglePeriod={handleTogglePeriod}
+        onReset={handleReset}
+      />
+    </>
   );
 }
