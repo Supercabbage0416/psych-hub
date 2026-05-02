@@ -2,11 +2,15 @@
 
 import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const router = useRouter();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,18 +19,24 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
-    setStatus('sending');
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    setErrorMsg('');
+
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+      if (error) { setErrorMsg(error.message); setLoading(false); return; }
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
       setErrorMsg(error.message);
-      setStatus('error');
-    } else {
-      setStatus('sent');
+      setLoading(false);
+      return;
     }
+
+    router.push('/');
+    router.refresh();
   }
 
   return (
@@ -36,7 +46,7 @@ export default function LoginPage() {
       background: 'var(--bg, #0d1424)',
       padding: '0 24px',
     }}>
-      {/* Logo / name */}
+      {/* Logo */}
       <div style={{ marginBottom: 48, textAlign: 'center' }}>
         <p style={{
           fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif",
@@ -61,98 +71,81 @@ export default function LoginPage() {
         border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 24, padding: '32px 28px',
       }}>
-        {status === 'sent' ? (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 28, marginBottom: 16 }}>✉️</p>
-            <p style={{
-              fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif",
-              fontSize: 20, fontWeight: 500, color: 'var(--ink, #e8eef9)',
-              marginBottom: 10,
-            }}>
-              Check your email
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--ink-2, #a8b4cf)', lineHeight: 1.6 }}>
-              We sent a sign-in link to <strong style={{ color: 'var(--ink, #e8eef9)' }}>{email}</strong>.
-              Click it to continue — no password needed.
-            </p>
-            <button
-              onClick={() => setStatus('idle')}
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 4 }}>
+          {(['signin', 'signup'] as const).map(m => (
+            <button key={m} onClick={() => { setMode(m); setErrorMsg(''); }}
               style={{
-                marginTop: 24, fontSize: 13, color: 'var(--ink-3, #6b789a)',
-                background: 'none', border: 'none', cursor: 'pointer',
-                textDecoration: 'underline',
+                flex: 1, padding: '8px 0', borderRadius: 9, fontSize: 14, fontWeight: 500,
+                border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                background: mode === m ? 'rgba(122,166,255,0.15)' : 'transparent',
+                color: mode === m ? 'var(--accent, #7aa6ff)' : 'var(--ink-3, #6b789a)',
               }}>
-              Use a different email
+              {m === 'signin' ? 'Sign in' : 'Create account'}
             </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <p style={{
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3, #6b789a)', marginBottom: 8 }}>
+            Email
+          </label>
+          <input
+            type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="you@example.com" required autoFocus
+            style={{
+              width: '100%', padding: '12px 14px', marginBottom: 14,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12, fontSize: 15, color: 'var(--ink, #e8eef9)',
+              outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(122,166,255,0.4)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+          />
+
+          <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3, #6b789a)', marginBottom: 8 }}>
+            Password
+          </label>
+          <input
+            type="password" value={password} onChange={e => setPassword(e.target.value)}
+            placeholder={mode === 'signup' ? 'Choose a password' : 'Your password'}
+            required minLength={6}
+            style={{
+              width: '100%', padding: '12px 14px', marginBottom: 8,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12, fontSize: 15, color: 'var(--ink, #e8eef9)',
+              outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(122,166,255,0.4)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+          />
+          {mode === 'signup' && (
+            <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)', marginBottom: 16 }}>
+              At least 6 characters
+            </p>
+          )}
+
+          {errorMsg && (
+            <p style={{ fontSize: 13, color: '#ff6b6b', marginBottom: 14, marginTop: 6 }}>
+              {errorMsg}
+            </p>
+          )}
+
+          <button
+            type="submit" disabled={loading || !email.trim() || !password}
+            style={{
+              width: '100%', padding: '14px 0', marginTop: 8,
+              borderRadius: 999, fontSize: 15, fontWeight: 600,
               fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif",
-              fontSize: 18, fontWeight: 500, color: 'var(--ink, #e8eef9)',
-              marginBottom: 6,
+              background: 'rgba(122,166,255,0.12)', border: '1px solid rgba(122,166,255,0.3)',
+              color: 'var(--accent, #7aa6ff)',
+              cursor: loading ? 'default' : 'pointer',
+              opacity: (loading || !email.trim() || !password) ? 0.6 : 1,
+              transition: 'all 0.2s',
             }}>
-              Sign in
-            </p>
-            <p style={{
-              fontSize: 13, color: 'var(--ink-2, #a8b4cf)',
-              marginBottom: 24, lineHeight: 1.5,
-            }}>
-              Enter your email and we&apos;ll send you a magic link.
-            </p>
-
-            <label style={{
-              display: 'block', fontSize: 11, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: 'var(--ink-3, #6b789a)',
-              marginBottom: 8,
-            }}>
-              Email address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoFocus
-              style={{
-                width: '100%', padding: '12px 14px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 12, fontSize: 15,
-                color: 'var(--ink, #e8eef9)',
-                outline: 'none', boxSizing: 'border-box',
-                transition: 'border-color 0.2s',
-                marginBottom: 16,
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(122,166,255,0.4)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
-            />
-
-            {status === 'error' && (
-              <p style={{ fontSize: 13, color: '#ff6b6b', marginBottom: 12 }}>
-                {errorMsg || 'Something went wrong. Please try again.'}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={status === 'sending' || !email.trim()}
-              style={{
-                width: '100%', padding: '14px 0',
-                borderRadius: 999, fontSize: 15, fontWeight: 600,
-                fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif",
-                background: 'rgba(122,166,255,0.12)',
-                border: '1px solid rgba(122,166,255,0.3)',
-                color: 'var(--accent, #7aa6ff)',
-                cursor: status === 'sending' ? 'default' : 'pointer',
-                opacity: (!email.trim() || status === 'sending') ? 0.6 : 1,
-                transition: 'all 0.2s',
-              }}>
-              {status === 'sending' ? 'Sending...' : 'Send magic link →'}
-            </button>
-          </form>
-        )}
+            {loading ? '...' : mode === 'signin' ? 'Sign in →' : 'Create account →'}
+          </button>
+        </form>
       </div>
 
       <p style={{
