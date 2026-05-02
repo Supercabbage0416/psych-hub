@@ -5,6 +5,7 @@ import { getJournalEntries, getUserArticles } from '@/lib/supabase';
 import { getCategoriesForCheckIn } from '@/lib/articleCategories';
 import { loadSession } from '@/lib/session';
 import type { MoodValue } from '@/lib/checkin';
+import ArticleSummaryDrawer from '@/components/ArticleSummaryDrawer';
 
 interface JournalEntry { id: string; content: string; created_at: string; entry_type?: string; prompt?: string }
 interface Article { id: string; title: string; url?: string; source?: string; created_at?: string; category_name?: string; tags?: string[] }
@@ -26,6 +27,7 @@ export default function ReflectPage() {
   const [todayArticle, setTodayArticle] = useState<{ title: string; url: string; source: string; summary?: string } | null>(null);
   const [articleLoading, setArticleLoading] = useState(true);
   const [loading, setLoading]   = useState(true);
+  const [drawerArticle, setDrawerArticle] = useState<{ title: string; url: string; source: string; summary?: string } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -126,16 +128,16 @@ export default function ReflectPage() {
               {articleLoading ? (
                 <div style={{ height: 80, borderRadius: 20, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
               ) : todayArticle ? (
-                <a href={todayArticle.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
+                <button onClick={() => setDrawerArticle(todayArticle)} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                   {card(<>
                     <p style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ember, #ff8c5a)', marginBottom: 8, fontWeight: 600 }}>Matched for you</p>
                     <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 18, fontWeight: 500, color: 'var(--ink, #e8eef9)', lineHeight: 1.35, marginBottom: 6 }}>{todayArticle.title}</p>
                     {todayArticle.summary && (
                       <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 13, color: 'var(--ink-2, #a8b4cf)', lineHeight: 1.6, marginBottom: 8, fontStyle: 'italic' }}>{todayArticle.summary}</p>
                     )}
-                    <p style={{ fontSize: 12, color: 'var(--ink-3, #6b789a)' }}>{todayArticle.source}</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-3, #6b789a)' }}>{todayArticle.source} · tap to read summary</p>
                   </>)}
-                </a>
+                </button>
               ) : (
                 card(<p style={{ fontSize: 13, color: 'var(--ink-3, #6b789a)', fontStyle: 'italic' }}>No reading found for today. Check back later.</p>)
               )}
@@ -155,7 +157,8 @@ export default function ReflectPage() {
                   {saved.map(a => (
                     <div key={a.id}>
                       {a.url ? (
-                        <a href={a.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
+                        <button onClick={() => setDrawerArticle({ title: a.title, url: a.url ?? '', source: a.source ?? '' })}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                           {card(<>
                             {a.category_name && <p style={{ fontSize: 10, color: 'var(--ink-3, #6b789a)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{a.category_name}</p>}
                             <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 16, color: 'var(--ink, #e8eef9)', lineHeight: 1.4, marginBottom: 4 }}>{a.title}</p>
@@ -169,7 +172,7 @@ export default function ReflectPage() {
                             )}
                             {a.created_at && <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)', marginTop: 6 }}>{dayLabel(a.created_at)}</p>}
                           </>)}
-                        </a>
+                        </button>
                       ) : card(<>
                         <p style={{ fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", fontSize: 16, color: 'var(--ink, #e8eef9)', lineHeight: 1.4 }}>{a.title}</p>
                         {a.source && <p style={{ fontSize: 11, color: 'var(--ink-3, #6b789a)', marginTop: 4 }}>{a.source}</p>}
@@ -223,6 +226,11 @@ export default function ReflectPage() {
           </div>
         )}
       </div>
+
+      <ArticleSummaryDrawer
+        article={drawerArticle}
+        onClose={() => setDrawerArticle(null)}
+      />
     </div>
   );
 }

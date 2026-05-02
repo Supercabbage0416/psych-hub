@@ -5,6 +5,7 @@ import type { Period } from '@/lib/usePeriod';
 import { getCategoriesForCheckIn } from '@/lib/articleCategories';
 import type { MoodValue } from '@/lib/checkin';
 import { getJournalEntries, saveUserArticle } from '@/lib/supabase';
+import ArticleSummaryDrawer from '@/components/ArticleSummaryDrawer';
 
 interface PatternData { moodArc: string; keyPattern: string; nudge: string; action: string }
 
@@ -20,6 +21,9 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
   const [article, setArticle]           = useState<{ title: string; url: string; source: string; reason: string; summary?: string } | null>(null);
   const [loadingPattern, setLoadingPattern] = useState(true);
   const [loadingArticle, setLoadingArticle] = useState(true);
+
+  // Drawer
+  const [drawerOpen, setDrawerOpen]     = useState(false);
 
   // Save flow state
   const [saveState, setSaveState]       = useState<'idle' | 'tagging' | 'saving' | 'saved'>('idle');
@@ -177,17 +181,15 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
         <div style={{ width: '100%', maxWidth: 380, height: 100, borderRadius: 18, background: 'rgba(255,255,255,0.04)', marginBottom: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />
       ) : article ? (
         <div style={{ width: '100%', maxWidth: 380, marginBottom: 12 }}>
-          {/* Article link */}
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Article card — tap to open in-app summary */}
+          <button
+            onClick={() => setDrawerOpen(true)}
             style={{
-              display: 'block', padding: '18px', borderRadius: '18px 18px 0 0',
+              display: 'block', width: '100%', padding: '18px', borderRadius: '18px 18px 0 0',
               background: 'var(--surface, #1a2745)', border: '1px solid rgba(255,255,255,0.06)',
               borderBottom: 'none',
               boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-              textDecoration: 'none',
+              textAlign: 'left', cursor: 'pointer',
             }}>
             <p style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ember, #ff8c5a)', marginBottom: 8, fontWeight: 600 }}>
               {isNight ? "Tonight's reading" : "Today's primer"}
@@ -201,9 +203,9 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
               </p>
             )}
             <p style={{ fontSize: 12, color: 'var(--ink-3, #6b789a)' }}>
-              {article.source}
+              {article.source} · tap to read summary
             </p>
-          </a>
+          </button>
 
           {/* Tag picker or save button */}
           {saveState === 'idle' && (
@@ -274,6 +276,11 @@ export default function ActRest({ period, mood, lesson, onExit }: Props) {
         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--ink-3, #6b789a)', fontStyle: 'italic', fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", marginTop: 8 }}>
         — {isNight ? "I'm good. Off I go." : 'Skip the reading. Go.'} —
       </button>
+
+      <ArticleSummaryDrawer
+        article={drawerOpen ? article : null}
+        onClose={() => setDrawerOpen(false)}
+      />
     </div>
   );
 }
