@@ -228,6 +228,76 @@ export async function saveCheckIn(checkIn: {
   );
 }
 
+// ── Raw thoughts + daily digests ──────────────────────────────────────────
+
+export async function saveRawThought(content: string) {
+  const deviceId = getDeviceId();
+  return supabase.from('journal_entries').insert({
+    device_id: deviceId, content, tags: [], prompt: '', entry_type: 'raw_thought',
+  });
+}
+
+export async function getRawThoughtsForDate(date: string) {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('journal_entries')
+    .select('id, content, created_at')
+    .eq('device_id', deviceId)
+    .eq('entry_type', 'raw_thought')
+    .gte('created_at', `${date}T00:00:00`)
+    .lte('created_at', `${date}T23:59:59`)
+    .order('created_at', { ascending: true });
+  return data ?? [];
+}
+
+export async function hasDailyDigest(date: string) {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('journal_entries')
+    .select('id')
+    .eq('device_id', deviceId)
+    .eq('entry_type', 'daily_digest')
+    .eq('prompt', `digest:${date}`)
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
+export async function saveDailyDigest(date: string, digest: object) {
+  const deviceId = getDeviceId();
+  return supabase.from('journal_entries').insert({
+    device_id: deviceId,
+    content: JSON.stringify(digest),
+    entry_type: 'daily_digest',
+    prompt: `digest:${date}`,
+    tags: ['digest'],
+  });
+}
+
+export async function getDailyDigests(limit = 14) {
+  const deviceId = getDeviceId();
+  const { data } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('device_id', deviceId)
+    .eq('entry_type', 'daily_digest')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data ?? []).map(row => {
+    let digest: Record<string, unknown> = {};
+    try { digest = JSON.parse(row.content); } catch { /* empty */ }
+    return {
+      id: row.id as string,
+      date: (row.prompt as string).replace('digest:', ''),
+      createdAt: row.created_at as string,
+      themes: (digest.themes as string[]) ?? [],
+      mood_arc: (digest.mood_arc as string) ?? '',
+      key_insight: (digest.key_insight as string) ?? '',
+      actions: (digest.actions as string[]) ?? [],
+      summary: (digest.summary as string) ?? '',
+    };
+  });
+}
+
 // ── Lessons ────────────────────────────────────────────────────────────────
 
 export async function createLesson(input: {

@@ -9,6 +9,7 @@ import CheckInSummary from '@/components/CheckInSummary';
 import RecoveryNudgeCard from '@/components/RecoveryNudgeCard';
 import CozyRoom from '@/components/CozyRoom';
 import ReflectionBox from '@/components/ReflectionBox';
+import DailyNudgeCard from '@/components/DailyNudgeCard';
 import { getTodayCheckIn, createLesson } from '@/lib/supabase';
 import type { PartialCheckIn } from '@/lib/checkin';
 import { getCategoriesForCheckIn, getCategoryReason } from '@/lib/articleCategories';
@@ -109,9 +110,10 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Recovery nudge */}
+        {/* Recovery nudge + AI focus */}
         <section className="mb-5">
           <p className="text-xs text-warm-400 uppercase tracking-wide mb-2">One small thing</p>
+          <DailyNudgeCard />
           <RecoveryNudgeCard />
         </section>
 
@@ -167,6 +169,7 @@ export default function HomePage() {
         )}
         {showJournal && (
           <ThoughtCapture
+            quickMode
             onClose={() => setShowJournal(false)}
             onSaved={() => setShowJournal(false)}
           />

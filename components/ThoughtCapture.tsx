@@ -90,12 +90,13 @@ interface Props {
   onSaved?: () => void;
   onClose?: () => void;
   initialType?: EntryType;
-  contextNote?: string; // e.g. "After reading: [article title]"
+  contextNote?: string;
+  quickMode?: boolean; // frictionless quick dump — no type selector, saves as raw_thought
 }
 
-export default function ThoughtCapture({ onSaved, onClose, initialType, contextNote }: Props) {
+export default function ThoughtCapture({ onSaved, onClose, initialType, contextNote, quickMode }: Props) {
   const [entryType, setEntryType] = useState<EntryType>(initialType ?? 'free');
-  const [showTypeSelector, setShowTypeSelector] = useState(!initialType);
+  const [showTypeSelector, setShowTypeSelector] = useState(!initialType && !quickMode);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -114,14 +115,55 @@ Help me think deeper — what patterns or themes do you notice?`;
   const handleSave = async () => {
     if (!text.trim()) return;
     setSaving(true);
-    await saveJournalEntry(text.trim(), tags, config.prompt, entryType);
+    const type = quickMode ? 'raw_thought' as EntryType : entryType;
+    const prompt = quickMode ? '' : config.prompt;
+    const saveTags = quickMode ? [] : tags;
+    await saveJournalEntry(text.trim(), saveTags, prompt, type);
     setSaving(false);
     setDone(true);
-    setTimeout(() => {
-      onSaved?.();
-      onClose?.();
-    }, 800);
+    setTimeout(() => { onSaved?.(); onClose?.(); }, 800);
   };
+
+  if (quickMode) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col justify-end"
+        style={{ background: 'rgba(10,18,32,0.55)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose}>
+        <div className="bg-cream rounded-t-4xl px-6 pt-5 pb-8"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}
+          onClick={e => e.stopPropagation()}>
+          <div className="w-10 h-1 bg-warm-300 rounded-full mx-auto mb-4" />
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-serif text-warm-900 text-lg">What&apos;s on your mind?</p>
+            {onClose && (
+              <button onClick={onClose} className="text-warm-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-warm-400 mb-3">Dump it here — AI organizes it into your daily digest later.</p>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Anything at all. Half-formed thoughts are fine."
+            className="w-full min-h-[120px] resize-none bg-white rounded-2xl p-4 text-warm-800 text-sm leading-relaxed placeholder:text-warm-300 border border-warm-100 focus:outline-none focus:border-sage transition-colors"
+            autoFocus
+          />
+          <button
+            onClick={handleSave}
+            disabled={!text.trim() || saving || done}
+            className={`w-full mt-4 py-3 rounded-2xl text-sm font-medium transition-all ${
+              done ? 'bg-sage text-white' : 'bg-sage text-white active:scale-95 disabled:opacity-40'
+            }`}
+          >
+            {done ? '✓ Captured' : saving ? 'Saving...' : 'Capture thought'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end"

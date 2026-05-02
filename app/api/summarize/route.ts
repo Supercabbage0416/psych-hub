@@ -141,6 +141,27 @@ Respond ONLY in valid JSON with no extra text:
       return NextResponse.json(parsed);
     }
 
+    if (body.type === 'reframe') {
+      const { lesson, mood } = body as { lesson: string; mood?: string };
+      if (!lesson?.trim()) return NextResponse.json({ error: 'No lesson provided' }, { status: 400 });
+
+      const prompt = `Reframe this raw personal reflection into one clear, memorable insight sentence.
+
+Mood when written: ${mood ?? 'okay'}
+What they wrote: "${lesson}"
+
+Rules:
+- Maximum 20 words
+- Start with "I" or a concrete present-tense verb
+- Capture the real psychological insight, not just a summary
+- Sound like something written in a personal notebook — honest, not a self-help book
+
+Respond with ONLY the sentence. No quotes. No labels. No extra text.`;
+
+      const text = await callDeepSeek(prompt, 80);
+      return NextResponse.json({ reframed: text.replace(/^["']|["']$/g, '') });
+    }
+
     return NextResponse.json({ error: 'Unknown type' }, { status: 400 });
 
   } catch (e) {
