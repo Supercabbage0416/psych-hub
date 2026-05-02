@@ -15,7 +15,9 @@ export type EntryType =
   | 'recovery_action'
   | 'small_win'
   | 'meaning_note'
-  | 'free';
+  | 'free'
+  | 'raw_thought'
+  | 'daily_digest';
 
 interface EntryTypeConfig {
   label: string;
