@@ -13,22 +13,26 @@ export async function POST(req: Request) {
 
   const material = desc?.trim() ? `${title}\n\n${desc}` : title;
 
-  const prompt = `You are summarizing a psychology or wellbeing article for someone at the end of their day.
+  const prompt = `You are interpreting a psychology or wellbeing article for someone at the end of their day. Use this exact 4-part framework:
 
 Article: "${material.slice(0, 800)}"
 Source: ${source ?? 'unknown'}
 
-Write a concise in-app summary with exactly 3–4 bullet points. Each bullet should:
-- Be one clear sentence (max 20 words)
-- Capture the most practically useful insight
-- Use plain, warm, non-clinical language
+Return JSON only with these four fields:
 
-Also write one short "why this matters" sentence (max 20 words) for context.
+"finding" — One sentence. What the research or article actually found or claims. Start with "Research shows..." or "This article argues..." or similar. Max 25 words.
 
-Return JSON only:
+"meaning" — One to two sentences. What this finding implies about human behaviour, emotion, or daily life. No jargon. Max 35 words.
+
+"tension" — One sentence. The honest nuance or limitation — what this does NOT mean, or where it gets complicated. Max 25 words.
+
+"action" — One concrete thing someone could try today or this week based on this. Tiny and specific. Start with a verb. Max 20 words.
+
 {
-  "bullets": ["...", "...", "..."],
-  "why": "..."
+  "finding": "...",
+  "meaning": "...",
+  "tension": "...",
+  "action": "..."
 }`;
 
   const res = await fetch('https://api.deepseek.com/chat/completions', {
@@ -48,6 +52,6 @@ Return JSON only:
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content ?? '';
   const parsed = extractJson(raw);
-  if (!Array.isArray(parsed?.bullets)) return Response.json({ error: 'parse error' }, { status: 500 });
+  if (!parsed?.finding) return Response.json({ error: 'parse error' }, { status: 500 });
   return Response.json(parsed);
 }
