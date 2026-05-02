@@ -81,6 +81,18 @@ export const ENTRY_TYPES: Record<EntryType, EntryTypeConfig> = {
     prompt: getDailyPrompt(),
     placeholder: 'Write freely — no structure needed, just honest...',
   },
+  raw_thought: {
+    label: 'Quick thought',
+    icon: '💭',
+    prompt: '',
+    placeholder: 'Anything at all...',
+  },
+  daily_digest: {
+    label: 'Daily digest',
+    icon: '✨',
+    prompt: '',
+    placeholder: '',
+  },
 };
 
 const TYPE_QUICK: EntryType[] = [
