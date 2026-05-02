@@ -134,6 +134,37 @@ async function fetchCategoryItems(categoryId: CategoryId): Promise<RawItem[]> {
   }).slice(0, 12);
 }
 
+// POST /api/findings — body: { mood, categories: CategoryId[] }
+// Returns { articles: [{ title, url, source }] } for the client cache
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  const categoryIds: CategoryId[] = Array.isArray(body.categories)
+    ? (body.categories.filter((id: string) => CATEGORIES.some(c => c.id === id)) as CategoryId[])
+    : DEFAULT_CATEGORIES;
+
+  const ids = categoryIds.length > 0 ? categoryIds : DEFAULT_CATEGORIES;
+  const usedUrls = new Set<string>();
+  const articles: { title: string; url: string; source: string }[] = [];
+
+  for (const id of ids) {
+    const items = await fetchCategoryItems(id);
+    for (const item of items) {
+      if (!item.url || usedUrls.has(item.url)) continue;
+      usedUrls.add(item.url);
+      // Extract domain as source if no source provided
+      let source = '';
+      try { source = new URL(item.url).hostname.replace('www.', ''); } catch { /* ignore */ }
+      articles.push({ title: item.title, url: item.url, source });
+      if (articles.length >= 10) break;
+    }
+    if (articles.length >= 10) break;
+  }
+
+  return NextResponse.json({ articles }, {
+    headers: { 'Cache-Control': 's-maxage=1800, stale-while-revalidate=3600' },
+  });
+}
+
 // GET /api/findings?categories=stress_recovery,behavioral_activation
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

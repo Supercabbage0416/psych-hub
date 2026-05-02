@@ -63,6 +63,17 @@ export async function updateJournalEntry(id: string, content: string) {
   return supabase.from('journal_entries').update({ content }).eq('id', id);
 }
 
+export async function getNudgeEntries() {
+  const userId = await getUserId();
+  const { data } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .not('ai_nudge', 'is', null)
+    .order('created_at', { ascending: false });
+  return data ?? [];
+}
+
 export async function updateJournalEntryNudge(id: string, ai_nudge: string) {
   return supabase.from('journal_entries').update({ ai_nudge }).eq('id', id);
 }

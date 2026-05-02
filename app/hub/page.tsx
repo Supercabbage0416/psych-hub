@@ -1,9 +1,245 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getHubItems, deleteHubItem, saveHubItem } from '@/lib/supabase';
+import { getHubItems, deleteHubItem, saveHubItem, getNudgeEntries, updateJournalEntryStep } from '@/lib/supabase';
 import { loadState } from '@/lib/recovery/storage';
 import { getTodayMood } from '@/lib/supabase';
+
+// ── Nudge entry types ──────────────────────────────────────────────────────────
+interface NudgeEntry {
+  id: string; content: string; ai_nudge: string;
+  step_status?: string | null; follow_up?: string | null;
+  created_at: string;
+}
+
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// ── Single nudge card ──────────────────────────────────────────────────────────
+function NudgeCard({ entry, onUpdate }: { entry: NudgeEntry; onUpdate: (e: NudgeEntry) => void }) {
+  const [followUpText, setFollowUpText] = useState(entry.follow_up ?? '');
+  const [showInput, setShowInput] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deepLoading, setDeepLoading] = useState(false);
+  const [deepQuestion, setDeepQuestion] = useState('');
+
+  async function markStep(status: 'did' | 'did_not') {
+    await updateJournalEntryStep(entry.id, status).catch(() => {});
+    onUpdate({ ...entry, step_status: status });
+    setShowInput(true);
+  }
+
+  async function saveFollowUp() {
+    if (!followUpText.trim()) return;
+    setSaving(true);
+    await updateJournalEntryStep(entry.id, entry.step_status ?? 'did', followUpText.trim()).catch(() => {});
+    onUpdate({ ...entry, follow_up: followUpText.trim() });
+    setSaving(false);
+    setShowInput(false);
+  }
+
+  async function getDeepReflection() {
+    if (deepLoading || deepQuestion) return;
+    setDeepLoading(true);
+    try {
+      const context = `Original thought: "${entry.content}"\nAI nudge: "${entry.ai_nudge}"\nThey ${entry.step_status === 'did' ? 'did the step' : "couldn't do it today"}.${entry.follow_up ? `\nReflection: "${entry.follow_up}"` : ''}`;
+      const res = await fetch('/api/reflect-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: context, mood: 'general', period: 'night', mode: 'nudge' }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setDeepQuestion(d.nudge ?? d.insight ?? '');
+      }
+    } catch { /* ignore */ }
+    setDeepLoading(false);
+  }
+
+  const statusColor = entry.step_status === 'did'
+    ? { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)', text: '#16a34a' }
+    : entry.step_status === 'did_not'
+    ? { bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)', text: '#64748b' }
+    : null;
+
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-card border border-warm-100">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-warm-300">{dayLabel(entry.created_at)}</span>
+        {statusColor && (
+          <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: statusColor.bg, border: `1px solid ${statusColor.border}`, color: statusColor.text }}>
+            {entry.step_status === 'did' ? '✓ Did it' : '— Couldn\'t today'}
+          </span>
+        )}
+      </div>
+
+      {/* Original thought */}
+      <p className="text-warm-400 text-xs italic mb-3 leading-relaxed border-l-2 border-warm-100 pl-3">
+        "{entry.content.slice(0, 140)}{entry.content.length > 140 ? '…' : ''}"
+      </p>
+
+      {/* AI nudge */}
+      <div className="bg-amber-50 rounded-2xl p-3.5 mb-3 border border-amber-100">
+        <p className="text-xs text-amber-600 uppercase tracking-wide font-medium mb-1.5">✦ AI nudge</p>
+        <p className="text-sm text-warm-800 leading-relaxed">{entry.ai_nudge}</p>
+      </div>
+
+      {/* Step buttons */}
+      {!entry.step_status && (
+        <div className="flex gap-2 mb-2">
+          <button onClick={() => markStep('did')}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-green-200 bg-green-50 text-green-700 active:scale-98 transition-transform">
+            I did it ✓
+          </button>
+          <button onClick={() => markStep('did_not')}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-warm-100 text-warm-500 active:scale-98 transition-transform">
+            Couldn&apos;t today
+          </button>
+        </div>
+      )}
+
+      {/* Follow-up */}
+      {entry.follow_up ? (
+        <div className="mt-1">
+          <p className="text-xs text-warm-400 mb-1 uppercase tracking-wide">Your reflection</p>
+          <p className="text-sm text-warm-600 italic leading-relaxed">"{entry.follow_up}"</p>
+          {!deepQuestion && (
+            <button onClick={getDeepReflection} disabled={deepLoading}
+              className="text-xs text-sage mt-2 underline underline-offset-2 cursor-pointer bg-transparent border-none">
+              {deepLoading ? '✦ thinking deeper...' : '✦ Go one level deeper'}
+            </button>
+          )}
+          {deepQuestion && (
+            <div className="mt-3 bg-sage-pale rounded-2xl p-3 border border-sage/20">
+              <p className="text-xs text-sage uppercase tracking-wide font-medium mb-1.5">✦ Next reflection</p>
+              <p className="text-sm text-warm-700 leading-relaxed italic">{deepQuestion}</p>
+            </div>
+          )}
+        </div>
+      ) : showInput ? (
+        <div className="mt-2">
+          <textarea
+            value={followUpText}
+            onChange={e => setFollowUpText(e.target.value)}
+            placeholder="How did it go? What came up for you?"
+            autoFocus
+            rows={2}
+            className="w-full bg-cream rounded-xl px-3 py-2.5 text-sm text-warm-800 border border-warm-100 focus:outline-none focus:border-sage resize-none placeholder:text-warm-300 mb-2"
+          />
+          <div className="flex gap-2">
+            <button onClick={() => setShowInput(false)}
+              className="flex-1 py-2 rounded-xl text-sm border border-warm-200 text-warm-500">
+              Skip
+            </button>
+            <button onClick={saveFollowUp} disabled={saving || !followUpText.trim()}
+              className="flex-1 py-2 rounded-xl text-sm bg-sage text-white font-medium disabled:opacity-40">
+              {saving ? '...' : 'Save reflection'}
+            </button>
+          </div>
+        </div>
+      ) : entry.step_status && (
+        <button onClick={() => setShowInput(true)}
+          className="text-xs text-warm-400 underline underline-offset-2 mt-1 bg-transparent border-none cursor-pointer">
+          Add reflection
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Nudges Dashboard ───────────────────────────────────────────────────────────
+function NudgesDashboard() {
+  const [nudges, setNudges] = useState<NudgeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'did' | 'did_not'>('all');
+
+  useEffect(() => {
+    getNudgeEntries().then(data => {
+      setNudges(data as NudgeEntry[]);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  function handleUpdate(updated: NudgeEntry) {
+    setNudges(prev => prev.map(n => n.id === updated.id ? updated : n));
+  }
+
+  const filtered = nudges.filter(n => {
+    if (filter === 'pending') return !n.step_status;
+    if (filter === 'did') return n.step_status === 'did';
+    if (filter === 'did_not') return n.step_status === 'did_not';
+    return true;
+  });
+
+  const pendingCount = nudges.filter(n => !n.step_status).length;
+  const doneCount    = nudges.filter(n => n.step_status === 'did').length;
+
+  return (
+    <div>
+      {/* Stats row */}
+      {nudges.length > 0 && (
+        <div className="flex gap-3 mb-4">
+          {[
+            { label: 'Total nudges', value: nudges.length },
+            { label: 'Completed', value: doneCount },
+            { label: 'Pending', value: pendingCount },
+          ].map(s => (
+            <div key={s.label} className="flex-1 bg-white rounded-2xl p-3 border border-warm-100 text-center shadow-card">
+              <p className="font-serif text-2xl text-warm-800">{s.value}</p>
+              <p className="text-xs text-warm-400 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      {nudges.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+          {([
+            { id: 'all' as const, label: `All (${nudges.length})` },
+            { id: 'pending' as const, label: `Pending (${pendingCount})` },
+            { id: 'did' as const, label: `Done (${doneCount})` },
+            { id: 'did_not' as const, label: `Skipped (${nudges.filter(n => n.step_status === 'did_not').length})` },
+          ]).map(f => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium border transition-colors ${
+                filter === f.id ? 'bg-sage text-white border-sage' : 'bg-white text-warm-500 border-warm-100'
+              }`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2].map(i => <div key={i} className="h-36 bg-white rounded-3xl border border-warm-100 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="font-serif text-2xl text-warm-300 mb-2">
+            {nudges.length === 0 ? 'No nudges yet' : 'Nothing here'}
+          </p>
+          <p className="text-warm-400 text-sm">
+            {nudges.length === 0
+              ? 'Open a journal entry and tap ✦ Ask AI to get your first nudge'
+              : 'Try a different filter'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(n => <NudgeCard key={n.id} entry={n} onUpdate={handleUpdate} />)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Collection = 'explains_me' | 'helps_recover' | 'meaningful' | 'revisit';
 
@@ -88,6 +324,7 @@ function MeaningfulPrompt({ item, onDone, onSkip }: MeaningfulPromptProps) {
 }
 
 export default function HubPage() {
+  const [tab, setTab] = useState<'saved' | 'nudges'>('saved');
   const [items, setItems] = useState<HubItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCollection, setActiveCollection] = useState<Collection | 'all'>('all');
@@ -166,15 +403,32 @@ export default function HubPage() {
     <div className="px-5 pt-8 pb-28 animate-fade-in">
       <div className="flex items-end justify-between mb-4">
         <div>
-          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">What you're keeping</p>
+          <p className="text-warm-400 text-xs uppercase tracking-wide mb-1">What you&apos;re keeping</p>
           <h1 className="font-serif text-3xl text-warm-900">Keepsakes</h1>
         </div>
-        <button onClick={() => setShowNoteForm(!showNoteForm)}
-          className="bg-sage text-white text-sm px-4 py-2 rounded-full font-medium active:scale-95 transition-transform">
-          + Note
-        </button>
+        {tab === 'saved' && (
+          <button onClick={() => setShowNoteForm(!showNoteForm)}
+            className="bg-sage text-white text-sm px-4 py-2 rounded-full font-medium active:scale-95 transition-transform">
+            + Note
+          </button>
+        )}
       </div>
 
+      {/* Top tab switcher */}
+      <div className="flex gap-2 mb-5 bg-warm-50 rounded-2xl p-1 border border-warm-100">
+        {([{ id: 'saved', label: 'Saved' }, { id: 'nudges', label: '✦ Nudges' }] as const).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              tab === t.id ? 'bg-white shadow-card text-warm-800 border border-warm-100' : 'text-warm-400'
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'nudges' && <NudgesDashboard />}
+
+      {tab === 'saved' && <>
       {/* Topic pattern — what you keep returning to */}
       {topFields.length > 0 && (
         <div className="bg-white rounded-2xl px-4 py-3.5 border border-warm-100 shadow-card mb-4">
@@ -337,6 +591,7 @@ export default function HubPage() {
           onSkip={handleMeaningfulSkip}
         />
       )}
+      </>}
     </div>
   );
 }
