@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import type { Period } from '@/lib/usePeriod';
 
 interface Props {
@@ -20,6 +22,13 @@ const NAV_LINKS = [
 ];
 
 export default function Drawer({ open, period, onClose, onTogglePeriod, onReset }: Props) {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push('/login');
+  }
+
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
@@ -97,6 +106,24 @@ export default function Drawer({ open, period, onClose, onTogglePeriod, onReset 
             </button>
           )}
         </nav>
+
+        {/* Sign out */}
+        <div style={{ padding: '8px 12px 0' }}>
+          <button onClick={handleSignOut}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px', borderRadius: 12, width: '100%',
+              color: 'var(--ink-3, #6b789a)', background: 'none', border: 'none',
+              fontSize: 15, fontFamily: 'var(--font-sans, system-ui)',
+              cursor: 'pointer', textAlign: 'left',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <span style={{ fontSize: 18 }}>👋</span>
+            Sign out
+          </button>
+        </div>
 
         {/* Day/Night toggle footer */}
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--line, rgba(149,176,217,0.10))' }}>

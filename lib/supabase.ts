@@ -1,18 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
-export function getDeviceId(): string {
-  if (typeof window === 'undefined') return '';
-  let id = localStorage.getItem('psych_hub_device_id');
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem('psych_hub_device_id', id);
-  }
-  return id;
+export async function getUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  return user.id;
 }
 
 export function getWeekNumber(date: Date = new Date()): number {
@@ -24,17 +20,17 @@ export function getWeekNumber(date: Date = new Date()): number {
 }
 
 export async function logMood(mood: string) {
-  const deviceId = getDeviceId();
-  return supabase.from('mood_logs').insert({ device_id: deviceId, mood });
+  const userId = await getUserId();
+  return supabase.from('mood_logs').insert({ user_id: userId, mood });
 }
 
 export async function getTodayMood(): Promise<string | null> {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const today = new Date().toISOString().split('T')[0];
   const { data } = await supabase
     .from('mood_logs')
     .select('mood')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .gte('created_at', `${today}T00:00:00`)
     .order('created_at', { ascending: false })
     .limit(1);
@@ -42,12 +38,12 @@ export async function getTodayMood(): Promise<string | null> {
 }
 
 export async function getMoodHistory(days = 30) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const { data } = await supabase
     .from('mood_logs')
     .select('mood, created_at')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .gte('created_at', since)
     .order('created_at', { ascending: true });
   return data ?? [];
@@ -59,38 +55,38 @@ export async function saveJournalEntry(
   prompt: string,
   entry_type?: string,
 ) {
-  const deviceId = getDeviceId();
-  return supabase.from('journal_entries').insert({ device_id: deviceId, content, tags, prompt, entry_type });
+  const userId = await getUserId();
+  return supabase.from('journal_entries').insert({ user_id: userId, content, tags, prompt, entry_type });
 }
 
 export async function getJournalEntries() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('journal_entries')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   return data ?? [];
 }
 
 export async function saveReflection(content: string, observation: string) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const now = new Date();
   const week = getWeekNumber(now);
   const year = now.getFullYear();
   return supabase.from('weekly_reflections').upsert(
-    { device_id: deviceId, content, observation, week_number: week, year },
-    { onConflict: 'device_id,week_number,year' }
+    { user_id: userId, content, observation, week_number: week, year },
+    { onConflict: 'user_id,week_number,year' }
   );
 }
 
 export async function getThisWeekReflection() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const now = new Date();
   const { data } = await supabase
     .from('weekly_reflections')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .eq('week_number', getWeekNumber(now))
     .eq('year', now.getFullYear())
     .limit(1);
@@ -98,21 +94,21 @@ export async function getThisWeekReflection() {
 }
 
 export async function getReflections() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('weekly_reflections')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   return data ?? [];
 }
 
 export async function getGrowthStats() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const [moods, entries, reflections] = await Promise.all([
-    supabase.from('mood_logs').select('id', { count: 'exact' }).eq('device_id', deviceId),
-    supabase.from('journal_entries').select('id', { count: 'exact' }).eq('device_id', deviceId),
-    supabase.from('weekly_reflections').select('id', { count: 'exact' }).eq('device_id', deviceId),
+    supabase.from('mood_logs').select('id', { count: 'exact' }).eq('user_id', userId),
+    supabase.from('journal_entries').select('id', { count: 'exact' }).eq('user_id', userId),
+    supabase.from('weekly_reflections').select('id', { count: 'exact' }).eq('user_id', userId),
   ]);
   return {
     daysLogged: moods.count ?? 0,
@@ -127,14 +123,14 @@ export async function saveUserArticle(article: {
   title: string; content?: string; source?: string; url?: string;
   category_id?: string; category_name?: string; summary?: string; sentiment?: string;
 }) {
-  const deviceId = getDeviceId();
-  return supabase.from('user_articles').insert({ device_id: deviceId, ...article });
+  const userId = await getUserId();
+  return supabase.from('user_articles').insert({ user_id: userId, ...article });
 }
 
 export async function getUserArticles() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
-    .from('user_articles').select('*').eq('device_id', deviceId)
+    .from('user_articles').select('*').eq('user_id', userId)
     .order('created_at', { ascending: false });
   return data ?? [];
 }
@@ -146,14 +142,14 @@ export async function deleteUserArticle(id: string) {
 // ── Guided Sessions ────────────────────────────────────────────────────────
 
 export async function saveGuidedSession(conversation: object[], completed = true) {
-  const deviceId = getDeviceId();
-  return supabase.from('guided_sessions').insert({ device_id: deviceId, conversation, completed });
+  const userId = await getUserId();
+  return supabase.from('guided_sessions').insert({ user_id: userId, conversation, completed });
 }
 
 export async function getGuidedSessions() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
-    .from('guided_sessions').select('*').eq('device_id', deviceId)
+    .from('guided_sessions').select('*').eq('user_id', userId)
     .order('created_at', { ascending: false });
   return data ?? [];
 }
@@ -169,14 +165,14 @@ export async function saveHubItem(item: {
   stage_at_save?: string;
   mood_at_save?: string;
 }) {
-  const deviceId = getDeviceId();
-  return supabase.from('hub_items').insert({ device_id: deviceId, ...item });
+  const userId = await getUserId();
+  return supabase.from('hub_items').insert({ user_id: userId, ...item });
 }
 
 export async function getHubItems() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
-    .from('hub_items').select('*').eq('device_id', deviceId)
+    .from('hub_items').select('*').eq('user_id', userId)
     .order('created_at', { ascending: false });
   return data ?? [];
 }
@@ -190,21 +186,21 @@ export async function saveReflectionInsight(insight: {
   recommendation: string; reasoning: string;
   thread: { role: string; content: string }[];
 }) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('reflection_insights')
-    .insert({ device_id: deviceId, ...insight })
+    .insert({ user_id: userId, ...insight })
     .select()
     .single();
   return data;
 }
 
 export async function getLatestInsight() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('reflection_insights')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -220,29 +216,29 @@ export async function saveCheckIn(checkIn: {
   self_worth: number;
   social_safety: number;
 }) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const today = new Date().toISOString().split('T')[0];
   return supabase.from('daily_checkins').upsert(
-    { device_id: deviceId, date: today, ...checkIn },
-    { onConflict: 'device_id,date' }
+    { user_id: userId, date: today, ...checkIn },
+    { onConflict: 'user_id,date' }
   );
 }
 
 // ── Raw thoughts + daily digests ──────────────────────────────────────────
 
 export async function saveRawThought(content: string) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   return supabase.from('journal_entries').insert({
-    device_id: deviceId, content, tags: [], prompt: '', entry_type: 'raw_thought',
+    user_id: userId, content, tags: [], prompt: '', entry_type: 'raw_thought',
   });
 }
 
 export async function getRawThoughtsForDate(date: string) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('journal_entries')
     .select('id, content, created_at')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .eq('entry_type', 'raw_thought')
     .gte('created_at', `${date}T00:00:00`)
     .lte('created_at', `${date}T23:59:59`)
@@ -251,11 +247,11 @@ export async function getRawThoughtsForDate(date: string) {
 }
 
 export async function hasDailyDigest(date: string) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('journal_entries')
     .select('id')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .eq('entry_type', 'daily_digest')
     .eq('prompt', `digest:${date}`)
     .limit(1);
@@ -263,9 +259,9 @@ export async function hasDailyDigest(date: string) {
 }
 
 export async function saveDailyDigest(date: string, digest: object) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   return supabase.from('journal_entries').insert({
-    device_id: deviceId,
+    user_id: userId,
     content: JSON.stringify(digest),
     entry_type: 'daily_digest',
     prompt: `digest:${date}`,
@@ -274,11 +270,11 @@ export async function saveDailyDigest(date: string, digest: object) {
 }
 
 export async function getDailyDigests(limit = 14) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const { data } = await supabase
     .from('journal_entries')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .eq('entry_type', 'daily_digest')
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -305,9 +301,9 @@ export async function createLesson(input: {
   thoughts?: string | null;
   mood: { emoji: string; word: string };
 }) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   return supabase.from('lessons').insert({
-    device_id: deviceId,
+    user_id: userId,
     text: input.text,
     thoughts: input.thoughts ?? null,
     mood_emoji: input.mood.emoji,
@@ -316,11 +312,11 @@ export async function createLesson(input: {
 }
 
 export async function listLessons(filter?: { mood?: string }) {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   let query = supabase
     .from('lessons')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (filter?.mood) query = query.eq('mood_word', filter.mood);
   const { data } = await query;
@@ -337,12 +333,12 @@ export async function listLessons(filter?: { mood?: string }) {
 }
 
 export async function getTodayCheckIn() {
-  const deviceId = getDeviceId();
+  const userId = await getUserId();
   const today = new Date().toISOString().split('T')[0];
   const { data } = await supabase
     .from('daily_checkins')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .eq('date', today)
     .limit(1)
     .single();

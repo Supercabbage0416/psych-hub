@@ -1,7 +1,7 @@
 import type { RecoveryState, DailyRecord } from './types';
 import { STAGE_ORDER } from './config';
 import { shouldActivateLowEnergy } from './scoring';
-import { supabase, getDeviceId } from '@/lib/supabase';
+import { supabase, getUserId } from '@/lib/supabase';
 
 const KEY = 'recovery_state_v1';
 
@@ -88,10 +88,10 @@ export function deactivateLowEnergyMode(state: RecoveryState): RecoveryState {
 // --- Supabase sync (fire-and-forget) ---
 
 async function syncRecordToSupabase(record: DailyRecord): Promise<void> {
-  const deviceId = getDeviceId();
-  if (!deviceId) return;
+  const userId = await getUserId().catch(() => null);
+  if (!userId) return;
   await supabase.from('recovery_records').upsert({
-    device_id: deviceId,
+    user_id: userId,
     date: record.date,
     stage_id: record.stageId,
     nudge: record.nudge,
@@ -103,31 +103,31 @@ async function syncRecordToSupabase(record: DailyRecord): Promise<void> {
     effectiveness_score: record.effectivenessScore,
     reflections: record.reflections,
     feedback: record.feedback,
-  }, { onConflict: 'device_id,date' });
+  }, { onConflict: 'user_id,date' });
 }
 
 async function syncStateToSupabase(state: RecoveryState): Promise<void> {
-  const deviceId = getDeviceId();
-  if (!deviceId) return;
+  const userId = await getUserId().catch(() => null);
+  if (!userId) return;
   await supabase.from('recovery_state').upsert({
-    device_id: deviceId,
+    user_id: userId,
     current_stage: state.currentStage,
     stage_start_date: state.stageStartDate,
     low_energy_mode: state.lowEnergyMode,
     low_energy_streak: state.lowEnergyStreak,
     success_streak: state.successStreak,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'device_id' });
+  }, { onConflict: 'user_id' });
 }
 
 // Load records from Supabase (for cross-device or backup restore)
 export async function loadRecordsFromSupabase(): Promise<DailyRecord[]> {
-  const deviceId = getDeviceId();
-  if (!deviceId) return [];
+  const userId = await getUserId().catch(() => null);
+  if (!userId) return [];
   const { data } = await supabase
     .from('recovery_records')
     .select('*')
-    .eq('device_id', deviceId)
+    .eq('user_id', userId)
     .order('date', { ascending: true });
   if (!data) return [];
   return data.map(r => ({
