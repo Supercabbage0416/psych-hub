@@ -53,10 +53,22 @@ export async function saveJournalEntry(
   content: string,
   tags: string[],
   prompt: string,
-  entry_type?: string,
+  entry_type = 'thought',
 ) {
   const userId = await getUserId();
   return supabase.from('journal_entries').insert({ user_id: userId, content, tags, prompt, entry_type });
+}
+
+export async function updateJournalEntry(id: string, content: string) {
+  return supabase.from('journal_entries').update({ content }).eq('id', id);
+}
+
+export async function updateJournalEntryNudge(id: string, ai_nudge: string) {
+  return supabase.from('journal_entries').update({ ai_nudge }).eq('id', id);
+}
+
+export async function updateJournalEntryStep(id: string, step_status: string, follow_up?: string) {
+  return supabase.from('journal_entries').update({ step_status, follow_up: follow_up ?? null }).eq('id', id);
 }
 
 export async function getJournalEntries() {

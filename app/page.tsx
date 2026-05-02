@@ -37,9 +37,9 @@ export default function HomePage() {
     setAct('reflect');
   }
 
-  function handleReflect(savedLesson: string) {
-    setLesson(savedLesson);
-    saveSession({ lesson: savedLesson, act: 'rest' });
+  function handleReflect(savedThoughts: string) {
+    setLesson(savedThoughts);
+    saveSession({ lesson: savedThoughts, act: 'rest' });
     setAct('rest');
     prefetchArticle(mood);
   }
@@ -122,7 +122,6 @@ export default function HomePage() {
           period={period}
           mood={mood}
           initialThoughts={loadSession().thoughts}
-          initialLesson={loadSession().lesson}
           onComplete={handleReflect}
         />
       )}
