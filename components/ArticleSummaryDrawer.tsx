@@ -176,15 +176,16 @@ export default function ArticleSummaryDrawer({ article, onClose }: Props) {
 
           {/* Read full article */}
           <a href={article.url} target="_blank" rel="noopener noreferrer" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            width: '100%', padding: '13px 0', borderRadius: 999,
-            fontSize: 13, fontWeight: 500,
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-            color: 'var(--ink-2, #a8b4cf)', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width: '100%', padding: '15px 0', borderRadius: 999,
+            fontSize: 15, fontWeight: 600,
+            background: 'rgba(122,166,255,0.12)', border: '1px solid rgba(122,166,255,0.3)',
+            color: 'var(--accent, #7aa6ff)', textDecoration: 'none',
             fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif",
+            letterSpacing: '0.01em',
           }}>
-            Read the full article
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            Read full article
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
             </svg>
