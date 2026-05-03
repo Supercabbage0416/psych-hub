@@ -11,7 +11,6 @@ const tabs = [
     href: '/',
     label: 'Tonight',
     icon: (active: boolean) => (
-      // Moon
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
@@ -21,7 +20,6 @@ const tabs = [
     href: '/recover',
     label: 'Recover',
     icon: (active: boolean) => (
-      // Leaf
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
         <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
@@ -29,30 +27,9 @@ const tabs = [
     ),
   },
   {
-    href: '/journal',
-    label: 'Journal',
-    icon: (active: boolean) => (
-      // Pen / edit
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/hub',
-    label: 'Saved',
-    icon: (active: boolean) => (
-      // Heart
-      <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? ACTIVE : 'none'} stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-      </svg>
-    ),
-  },
-  {
     href: '/reflect',
     label: 'Reflect',
     icon: (active: boolean) => (
-      // Waves
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : IDLE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
         <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />

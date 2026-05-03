@@ -178,6 +178,21 @@ export async function getGuidedSessions() {
   return data ?? [];
 }
 
+export async function saveChatSession(conversation: object[], source: string, summary?: string) {
+  const userId = await getUserId();
+  return supabase.from('guided_sessions').insert({
+    user_id: userId, conversation, completed: true, source, summary: summary ?? null,
+  });
+}
+
+export async function getChatSessions() {
+  const userId = await getUserId();
+  const { data } = await supabase
+    .from('guided_sessions').select('*').eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return data ?? [];
+}
+
 // ── My Hub ─────────────────────────────────────────────────────────────────
 
 export async function saveHubItem(item: {
